@@ -42,18 +42,21 @@ func (uc *AddKomentarUseCase) Execute(ctx context.Context, input AddKomentarInpu
 	// Get ticket to verify it exists and get creator info
 	tiket, err := uc.tiketRepo.GetByID(ctx, input.TiketID)
 	if err != nil {
-		return nil, err
+		if entities.IsNotFound(err) {
+			return nil, entities.NewNotFoundError("tiket")
+		}
+		return nil, fmt.Errorf("gagal mengambil data tiket: %w", err)
 	}
 
 	// Create comment entity
 	komentar, err := entities.NewKomentar(input.TiketID, input.PenulisID, input.IsiPesan)
 	if err != nil {
-		return nil, err
+		return nil, entities.ErrValidation
 	}
 
 	// Save to repository
 	if err := uc.komentarRepo.Create(ctx, komentar); err != nil {
-		return nil, fmt.Errorf("failed to create comment: %w", err)
+		return nil, fmt.Errorf("gagal menambahkan komentar: %w", err)
 	}
 
 	// Notify ticket participants

@@ -43,7 +43,18 @@
       "Bash(curl:*)",
       "Bash(pkill -f \"go run main.go\")",
       "Bash(taskkill //F //IM \"go.exe\")",
-      "Bash(taskkill //F //IM \"main.exe\")"
+      "Bash(taskkill //F //IM \"main.exe\")",
+      "mcp__ide__getDiagnostics",
+      "Bash(dart pub:*)",
+      "Bash(pkill -f dart)",
+      "Bash(kill %1)",
+      "Bash(tee /tmp/backend.log)",
+      "Read(//tmp/**)",
+      "Bash(taskkill /F /IM main.exe)",
+      "Bash(findstr :8080)",
+      "Bash(taskkill /F /PID 1364)",
+      "Bash(findstr LISTENING)",
+      "Bash(taskkill:*)"
     ]
   }
 }

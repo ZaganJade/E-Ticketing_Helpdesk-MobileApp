@@ -32,7 +32,12 @@ type GetKomentarListResponse struct {
 // GetKomentarList handles listing comments for a ticket
 func (h *KomentarHandler) GetKomentarList(c *gin.Context) {
 	tiketID := c.Param("id")
-	tuid := uuid.MustParse(tiketID)
+
+	tuid, err := uuid.Parse(tiketID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tiket ID format"})
+		return
+	}
 
 	userID := c.GetString("userID")
 	peran := c.GetString("peran")
@@ -54,8 +59,13 @@ func (h *KomentarHandler) GetKomentarList(c *gin.Context) {
 
 // AddKomentar handles adding a comment
 func (h *KomentarHandler) AddKomentar(c *gin.Context) {
-	tiketID := c.Param("tiket_id")
-	tuid := uuid.MustParse(tiketID)
+	tiketID := c.Param("id")
+
+	tuid, err := uuid.Parse(tiketID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tiket ID format"})
+		return
+	}
 
 	var req AddKomentarRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -64,19 +74,31 @@ func (h *KomentarHandler) AddKomentar(c *gin.Context) {
 	}
 
 	userID := c.GetString("userID")
-	uid := uuid.MustParse(userID)
 
-	output, err := h.addKomentarUC.Execute(c.Request.Context(), usecases.AddKomentarInput{
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
+		return
+	}
+
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID format"})
+		return
+	}
+
+	output, execErr := h.addKomentarUC.Execute(c.Request.Context(), usecases.AddKomentarInput{
 		TiketID:   tuid,
 		PenulisID: uid,
 		IsiPesan:  req.IsiPesan,
 	})
-	if err != nil {
-		if entities.IsValidation(err) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if execErr != nil {
+		if entities.IsValidation(execErr) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": execErr.Error()})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Gagal menambahkan komentar",
+		})
 		return
 	}
 

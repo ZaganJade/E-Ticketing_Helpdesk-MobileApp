@@ -155,7 +155,7 @@ class _TiketDetailPageState extends State<TiketDetailPage> {
             }
           },
           builder: (context, state) {
-            if (state is TiketLoading) {
+            if (state is TiketLoading || state is TiketInitial) {
               return const ListSkeleton(itemCount: 3);
             }
 
@@ -169,7 +169,7 @@ class _TiketDetailPageState extends State<TiketDetailPage> {
               return _buildDetailContent(state.tiket);
             }
 
-            return const SizedBox.shrink();
+            return const Center(child: CircularProgressIndicator());
           },
         ),
       ),
@@ -243,11 +243,10 @@ class _TiketDetailPageState extends State<TiketDetailPage> {
                     ),
                   ),
                 ),
-                SliverToBoxAdapter(
-                  child: KomentarList(
-                    tiketId: widget.tiketId,
-                    currentUserId: Supabase.instance.client.auth.currentUser?.id ?? '',
-                  ),
+                // Komentar list as proper sliver
+                KomentarList(
+                  tiketId: widget.tiketId,
+                  currentUserId: Supabase.instance.client.auth.currentUser?.id ?? '',
                 ),
                 const SliverPadding(
                   padding: EdgeInsets.only(bottom: 100),
@@ -377,12 +376,44 @@ class _TiketDetailPageState extends State<TiketDetailPage> {
     return FutureBuilder<bool>(
       future: RoleUtils.canChangeTiketStatus(),
       builder: (context, snapshot) {
-        // Don't show anything while loading or if user can't change status
-        if (snapshot.connectionState == ConnectionState.waiting ||
-            !(snapshot.data ?? false)) {
-          return const SizedBox.shrink();
+        // Show loading indicator while waiting
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.default_,
+              vertical: AppSpacing.sm,
+            ),
+            child: const LinearProgressIndicator(),
+          );
         }
 
+        // If user can't change status, show read-only status
+        if (!(snapshot.data ?? false)) {
+          return Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.default_,
+              vertical: AppSpacing.sm,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Status Tiket',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                StatusBadge(
+                  status: _getStatusFromString(tiket.status),
+                  isLarge: true,
+                ),
+              ],
+            ),
+          );
+        }
+
+        // User can change status - show dropdown
         return Container(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.default_,

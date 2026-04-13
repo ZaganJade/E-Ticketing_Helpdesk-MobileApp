@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dartz/dartz.dart';
+import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
 
 import '../../../../core/services/api_service.dart';
@@ -72,9 +73,13 @@ class KomentarRepositoryImpl implements KomentarRepository {
 
       _logger.i('Adding komentar to tiket: $tiketId');
 
+      // Backend extracts penulis_id from JWT token automatically
+      // Only send isi_pesan in the request body
       final response = await _apiService.post(
         '/tikets/$tiketId/komentars',
-        data: {'isi_pesan': isiPesan.trim()},
+        data: {
+          'isi_pesan': isiPesan.trim(),
+        },
       );
 
       final data = response.data;
@@ -87,6 +92,13 @@ class KomentarRepositoryImpl implements KomentarRepository {
 
       _logger.i('Komentar added: ${komentar.id}');
       return Right(komentar);
+    } on DioException catch (e) {
+      _logger.e('DioError adding komentar: ${e.message}');
+      if (e.response != null) {
+        _logger.e('Response status: ${e.response?.statusCode}');
+        _logger.e('Response data: ${e.response?.data}');
+      }
+      return Left(ServerFailure(e.response?.data?['error'] ?? 'Gagal menambahkan komentar'));
     } on Exception catch (e) {
       _logger.e('Error adding komentar: $e');
       return Left(UnknownKomentarFailure(e.toString()));
@@ -123,6 +135,8 @@ class KomentarRepositoryImpl implements KomentarRepository {
     return controller.stream;
   }
 
+  String? _lastEmittedHash;
+
   Future<void> _fetchAndEmitKomentarList(String tiketId) async {
     try {
       final result = await getKomentarByTiketId(tiketId);
@@ -131,7 +145,14 @@ class KomentarRepositoryImpl implements KomentarRepository {
         (komentarList) {
           final controller = _streamControllers[tiketId];
           if (controller != null && !controller.isClosed) {
-            controller.add(komentarList);
+            // Create a hash of IDs to detect duplicates
+            final currentHash = komentarList.map((k) => k.id).join(',');
+            if (currentHash != _lastEmittedHash) {
+              _lastEmittedHash = currentHash;
+              controller.add(komentarList);
+            } else {
+              _logger.d('Skipping duplicate emit - data unchanged');
+            }
           }
         },
       );

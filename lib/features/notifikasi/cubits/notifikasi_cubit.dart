@@ -259,6 +259,14 @@ class NotifikasiCubit extends Cubit<NotifikasiState> {
     }
   }
 
+  // Reset hasNewData flag after animation completes
+  void resetHasNewData() {
+    if (state is NotifikasiListLoaded) {
+      final currentState = state as NotifikasiListLoaded;
+      emit(currentState.copyWith(hasNewData: false));
+    }
+  }
+
   // Refresh (simple version)
   Future<void> refresh() async {
     if (state is NotifikasiListLoaded) {

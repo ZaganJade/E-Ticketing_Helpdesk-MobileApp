@@ -7,6 +7,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../cubits/notifikasi_cubit.dart';
+import '../models/notifikasi_model.dart';
 import '../widgets/notifikasi_card.dart';
 
 class NotifikasiListPage extends StatefulWidget {
@@ -229,8 +230,8 @@ class _NotifikasiListPageState extends State<NotifikasiListPage>
         _refreshAnimationController
           ..reset()
           ..forward().then((_) {
-            // Reset hasNewData after animation
-            _cubit.emit(state.copyWith(hasNewData: false));
+            // Reset hasNewData after animation via cubit method
+            _cubit.resetHasNewData();
           });
       }
 

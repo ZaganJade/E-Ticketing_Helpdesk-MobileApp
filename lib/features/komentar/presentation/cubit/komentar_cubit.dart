@@ -76,14 +76,15 @@ class KomentarCubit extends Cubit<KomentarState> {
     final newKomentar = komentarList.where((k) => !currentIds.contains(k.id)).toList();
 
     if (newKomentar.isNotEmpty) {
+      _logger.i('Found ${newKomentar.length} new komentar');
       emit(KomentarLoaded(
         komentarList: komentarList,
         hasNewKomentar: true,
         newKomentarId: newKomentar.last.id,
       ));
     } else {
-      // Just update the list without notification
-      emit(currentState.copyWith(komentarList: komentarList));
+      // No new komentar - don't emit to avoid unnecessary rebuilds
+      _logger.d('No new komentar, skipping emit');
     }
   }
 
@@ -98,11 +99,41 @@ class KomentarCubit extends Cubit<KomentarState> {
     }
   }
 
-  /// Refresh komentar list
+  /// Refresh komentar list silently (without showing loading state)
   Future<void> refresh() async {
-    if (_currentTiketId != null) {
-      await loadKomentar(_currentTiketId!);
-    }
+    if (_currentTiketId == null) return;
+
+    final result = await _komentarRepository.getKomentarByTiketId(_currentTiketId!);
+
+    result.fold(
+      (failure) => emit(KomentarError(failure.message)),
+      (komentarList) {
+        final currentState = state;
+        if (currentState is KomentarLoaded) {
+          // Silent update - merge with existing to avoid duplicates
+          final existingIds = currentState.komentarList.map((k) => k.id).toSet();
+          final mergedList = [
+            ...currentState.komentarList,
+            ...komentarList.where((k) => !existingIds.contains(k.id)),
+          ];
+          // Sort by creation time
+          mergedList.sort((a, b) => a.dibuatPada.compareTo(b.dibuatPada));
+
+          if (mergedList.length > currentState.komentarList.length) {
+            emit(KomentarLoaded(
+              komentarList: mergedList,
+              hasNewKomentar: true,
+              newKomentarId: mergedList.last.id,
+            ));
+          }
+        } else {
+          emit(KomentarLoaded(
+            komentarList: komentarList,
+            hasNewKomentar: false,
+          ));
+        }
+      },
+    );
   }
 
   /// Add a new komentar

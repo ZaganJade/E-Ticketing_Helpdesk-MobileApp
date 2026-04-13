@@ -75,11 +75,6 @@ class _DashboardPageState extends State<DashboardPage> {
             return _buildContent(state);
           },
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: _onBuatTiket,
-          icon: const Icon(Icons.add),
-          label: const Text('Buat Tiket'),
-        ),
       ),
     );
   }
@@ -233,9 +228,6 @@ class _DashboardPageState extends State<DashboardPage> {
               onViewAll: _onLihatSemuaTiket,
               onTapTiket: _onTapTiket,
             ),
-
-            // Bottom padding for FAB
-            const SizedBox(height: 80),
           ],
         ),
       ),

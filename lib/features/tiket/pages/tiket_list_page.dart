@@ -103,13 +103,6 @@ class _TiketListPageState extends State<TiketListPage> {
             ),
           ],
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: _navigateToCreate,
-          backgroundColor: AppColors.primary,
-          icon: const Icon(Icons.add),
-          label: const Text('Buat Tiket'),
-        ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
         body: BlocBuilder<TiketCubit, TiketState>(
           bloc: _cubit,
           builder: (context, state) {

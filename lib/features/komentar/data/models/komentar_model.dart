@@ -13,34 +13,32 @@ class KomentarModel extends Komentar {
     required super.dibuatPada,
   });
 
-  /// Create KomentarModel from Supabase JSON
-  /// Expects joined data with pengguna information
+  /// Create KomentarModel from Backend API JSON
+  /// Backend returns flat fields: penulis_nama, penulis_peran
   factory KomentarModel.fromJson(Map<String, dynamic> json) {
-    // Handle nested pengguna object from join
-    final penggunaData = json['pengguna'] as Map<String, dynamic>?;
-
     return KomentarModel(
       id: json['id'] as String,
       tiketId: json['tiket_id'] as String,
       penulisId: json['penulis_id'] as String,
-      namaPenulis: penggunaData?['nama'] as String? ?? 'Unknown',
-      peranPenulis: Peran.fromString(penggunaData?['peran'] as String? ?? 'pengguna'),
+      namaPenulis: json['penulis_nama'] as String? ?? 'Unknown',
+      peranPenulis: Peran.fromString(json['penulis_peran'] as String? ?? 'pengguna'),
       isiPesan: json['isi_pesan'] as String,
       dibuatPada: DateTime.parse(json['dibuat_pada'] as String),
     );
   }
 
-  /// Create from Supabase realtime payload
+  /// Create from Backend API response (same as fromJson for backend)
   factory KomentarModel.fromRealtimePayload(
     Map<String, dynamic> payload,
     Map<String, dynamic>? penggunaData,
   ) {
+    // Backend returns flat fields, ignore penggunaData
     return KomentarModel(
       id: payload['id'] as String,
       tiketId: payload['tiket_id'] as String,
       penulisId: payload['penulis_id'] as String,
-      namaPenulis: penggunaData?['nama'] as String? ?? 'Unknown',
-      peranPenulis: Peran.fromString(penggunaData?['peran'] as String? ?? 'pengguna'),
+      namaPenulis: payload['penulis_nama'] as String? ?? 'Unknown',
+      peranPenulis: Peran.fromString(payload['penulis_peran'] as String? ?? 'pengguna'),
       isiPesan: payload['isi_pesan'] as String,
       dibuatPada: DateTime.parse(payload['dibuat_pada'] as String),
     );

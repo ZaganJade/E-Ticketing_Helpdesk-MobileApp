@@ -2,20 +2,19 @@ package realtime
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"log"
 
 	"github.com/google/uuid"
 	"github.com/supabase-community/supabase-go"
-	"eticketinghelpdesk/entities"
 )
 
 // RealtimeClient handles Supabase Realtime subscriptions
+// NOTE: Realtime functionality is currently stubbed as supabase-go doesn't support it directly.
+// For realtime features, consider using WebSockets directly or a different approach.
 type RealtimeClient struct {
-	client      *supabase.Client
-	handlers    map[string]EventHandler
-	channels    map[string]interface{}
+	client   *supabase.Client
+	handlers map[string]EventHandler
+	channels map[string]interface{}
 }
 
 // EventHandler is a callback function for realtime events
@@ -30,7 +29,7 @@ type RealtimePayload struct {
 	New    map[string]interface{} `json:"new"`
 }
 
-// NewRealtimeClient creates a new realtime client
+// NewRealtimeClient creates a new realtime client (stubbed)
 func NewRealtimeClient(client *supabase.Client) *RealtimeClient {
 	return &RealtimeClient{
 		client:   client,
@@ -39,133 +38,36 @@ func NewRealtimeClient(client *supabase.Client) *RealtimeClient {
 	}
 }
 
-// SubscribeTiketChanges subscribes to ticket changes
+// SubscribeTiketChanges subscribes to ticket changes (stubbed - returns nil)
 func (r *RealtimeClient) SubscribeTiketChanges(ctx context.Context, handler EventHandler) error {
-	channelName := "tiket_changes"
-
-	// Create channel for tiket table
-	channel := r.client.Channel(channelName)
-
-	// Subscribe to all changes on tiket table
-	onTiketChange := func(payload interface{}) {
-		data, err := json.Marshal(payload)
-		if err != nil {
-			log.Printf("Error marshaling tiket payload: %v", err)
-			return
-		}
-
-		var realtimePayload RealtimePayload
-		if err := json.Unmarshal(data, &realtimePayload); err != nil {
-			log.Printf("Error unmarshaling tiket payload: %v", err)
-			return
-		}
-
-		handler(realtimePayload)
-	}
-
-	// Bind to all events (INSERT, UPDATE, DELETE)
-	channel.On("postgres_changes", onTiketChange)
-
-	// Subscribe
-	if err := channel.Subscribe(); err != nil {
-		return fmt.Errorf("failed to subscribe to tiket changes: %w", err)
-	}
-
-	r.channels[channelName] = channel
-	r.handlers[channelName] = handler
-
-	log.Println("Subscribed to tiket changes")
+	// Realtime not supported in current supabase-go client
+	log.Println("Realtime subscriptions not supported in current supabase-go client")
 	return nil
 }
 
-// SubscribeKomentarChanges subscribes to comment changes
+// SubscribeKomentarChanges subscribes to comment changes (stubbed - returns nil)
 func (r *RealtimeClient) SubscribeKomentarChanges(ctx context.Context, handler EventHandler) error {
-	channelName := "komentar_changes"
-
-	channel := r.client.Channel(channelName)
-
-	onKomentarChange := func(payload interface{}) {
-		data, err := json.Marshal(payload)
-		if err != nil {
-			log.Printf("Error marshaling komentar payload: %v", err)
-			return
-		}
-
-		var realtimePayload RealtimePayload
-		if err := json.Unmarshal(data, &realtimePayload); err != nil {
-			log.Printf("Error unmarshaling komentar payload: %v", err)
-			return
-		}
-
-		handler(realtimePayload)
-	}
-
-	channel.On("postgres_changes", onKomentarChange)
-
-	if err := channel.Subscribe(); err != nil {
-		return fmt.Errorf("failed to subscribe to komentar changes: %w", err)
-	}
-
-	r.channels[channelName] = channel
-	r.handlers[channelName] = handler
-
-	log.Println("Subscribed to komentar changes")
+	// Realtime not supported in current supabase-go client
+	log.Println("Realtime subscriptions not supported in current supabase-go client")
 	return nil
 }
 
-// SubscribeNotifikasiChanges subscribes to notification changes
+// SubscribeNotifikasiChanges subscribes to notification changes (stubbed - returns nil)
 func (r *RealtimeClient) SubscribeNotifikasiChanges(ctx context.Context, userID uuid.UUID, handler EventHandler) error {
-	channelName := fmt.Sprintf("notifikasi_changes_%s", userID.String())
-
-	channel := r.client.Channel(channelName)
-
-	onNotifikasiChange := func(payload interface{}) {
-		data, err := json.Marshal(payload)
-		if err != nil {
-			log.Printf("Error marshaling notifikasi payload: %v", err)
-			return
-		}
-
-		var realtimePayload RealtimePayload
-		if err := json.Unmarshal(data, &realtimePayload); err != nil {
-			log.Printf("Error unmarshaling notifikasi payload: %v", err)
-			return
-		}
-
-		// Filter by user ID for notifikasi
-		if penggunaID, ok := realtimePayload.New["pengguna_id"]; ok {
-			if uid, err := uuid.Parse(fmt.Sprintf("%v", penggunaID)); err == nil && uid == userID {
-				handler(realtimePayload)
-			}
-		}
-	}
-
-	channel.On("postgres_changes", onNotifikasiChange)
-
-	if err := channel.Subscribe(); err != nil {
-		return fmt.Errorf("failed to subscribe to notifikasi changes: %w", err)
-	}
-
-	r.channels[channelName] = channel
-	r.handlers[channelName] = handler
-
-	log.Printf("Subscribed to notifikasi changes for user %s", userID)
+	// Realtime not supported in current supabase-go client
+	log.Printf("Realtime subscriptions not supported in current supabase-go client (user: %s)", userID)
 	return nil
 }
 
-// Unsubscribe unsubscribes from a channel
+// Unsubscribe unsubscribes from a channel (stubbed)
 func (r *RealtimeClient) Unsubscribe(channelName string) error {
-	if channel, ok := r.channels[channelName]; ok {
-		// Unsubscribe logic depends on supabase-go implementation
-		delete(r.channels, channelName)
-		delete(r.handlers, channelName)
-		log.Printf("Unsubscribed from %s", channelName)
-		_ = channel // Use the channel variable
-	}
+	delete(r.channels, channelName)
+	delete(r.handlers, channelName)
+	log.Printf("Unsubscribed from %s", channelName)
 	return nil
 }
 
-// Close closes all realtime connections
+// Close closes all realtime connections (stubbed)
 func (r *RealtimeClient) Close() error {
 	for name := range r.channels {
 		if err := r.Unsubscribe(name); err != nil {

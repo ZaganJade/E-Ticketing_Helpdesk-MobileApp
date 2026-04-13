@@ -464,4 +464,4 @@ Jika ada error:
 Happy coding! 🚀
 
 
-claude --resume cfc156af-897b-414a-9165-83ca647cecc4 
+./server.exe

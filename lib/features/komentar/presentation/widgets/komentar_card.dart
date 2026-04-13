@@ -11,12 +11,14 @@ class KomentarCard extends StatelessWidget {
   final Komentar komentar;
   final bool isCurrentUser;
   final bool isNew;
+  final VoidCallback? onReply;
 
   const KomentarCard({
     super.key,
     required this.komentar,
     this.isCurrentUser = false,
     this.isNew = false,
+    this.onReply,
   });
 
   @override
@@ -30,32 +32,34 @@ class KomentarCard extends StatelessWidget {
         borderRadius: AppBorderRadius.cardRadius,
       ),
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.default_,
         vertical: AppSpacing.sm,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Avatar (left side for staff, right side for user)
+          // Avatar on left for staff, spacer for user
           if (isStaff) ...[
             _buildAvatar(),
             const SizedBox(width: AppSpacing.sm),
-          ] else ...[
-            const SizedBox(width: AppSpacing.xl + AppSpacing.sm),
-          ],
+          ] else
+            const SizedBox(width: 48),
 
-          // Message bubble
+          // Message content
           Expanded(
             child: Column(
               crossAxisAlignment:
                   isStaff ? CrossAxisAlignment.start : CrossAxisAlignment.end,
               children: [
-                // Author info
-                _buildAuthorInfo(),
+                // Author info row
+                _buildAuthorInfo(isStaff),
                 const SizedBox(height: AppSpacing.xs),
 
-                // Bubble with tail
+                // Message bubble
                 _buildBubble(isStaff),
+
+                // Timestamp below bubble
+                const SizedBox(height: AppSpacing.xs),
+                _buildTimestamp(isStaff),
 
                 // New indicator
                 if (isNew) ...[
@@ -66,13 +70,12 @@ class KomentarCard extends StatelessWidget {
             ),
           ),
 
-          // Avatar for current user (right side)
+          // Spacer for staff, avatar on right for user
           if (!isStaff) ...[
             const SizedBox(width: AppSpacing.sm),
             _buildAvatar(),
-          ] else ...[
-            const SizedBox(width: AppSpacing.xl + AppSpacing.sm),
-          ],
+          ] else
+            const SizedBox(width: 48),
         ],
       ),
     );
@@ -100,26 +103,20 @@ class KomentarCard extends StatelessWidget {
     );
   }
 
-  Widget _buildAuthorInfo() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+  Widget _buildAuthorInfo(bool isStaff) {
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: AppSpacing.xs,
       children: [
-        Flexible(
-          child: Text(
-            komentar.namaPenulis,
-            style: AppTextStyles.label.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-            overflow: TextOverflow.ellipsis,
+        // Name
+        Text(
+          komentar.namaPenulis,
+          style: AppTextStyles.label.copyWith(
+            fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(width: AppSpacing.xs),
+        // Role badge
         _buildRoleBadge(),
-        const SizedBox(width: AppSpacing.xs),
-        Text(
-          _formatRelativeTime(komentar.dibuatPada),
-          style: AppTextStyles.caption,
-        ),
       ],
     );
   }
@@ -129,12 +126,12 @@ class KomentarCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
+        horizontal: 8,
+        vertical: 2,
       ),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Text(
@@ -142,6 +139,7 @@ class KomentarCard extends StatelessWidget {
         style: AppTextStyles.caption.copyWith(
           color: color,
           fontWeight: FontWeight.w600,
+          fontSize: 10,
         ),
       ),
     );
@@ -170,6 +168,9 @@ class KomentarCard extends StatelessWidget {
         : AppColors.primary;
 
     return Container(
+      constraints: BoxConstraints(
+        maxWidth: 280,
+      ),
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.default_,
         vertical: AppSpacing.md,
@@ -193,6 +194,43 @@ class KomentarCard extends StatelessWidget {
           color: textColor,
         ),
       ),
+    );
+  }
+
+  Widget _buildTimestamp(bool isStaff) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          _formatRelativeTime(komentar.dibuatPada),
+          style: AppTextStyles.caption.copyWith(
+            color: AppColors.textTertiary,
+            fontSize: 11,
+          ),
+        ),
+        // Reply button
+        if (onReply != null) ...[
+          const SizedBox(width: AppSpacing.sm),
+          InkWell(
+            onTap: onReply,
+            borderRadius: BorderRadius.circular(4),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 4,
+                vertical: 2,
+              ),
+              child: Text(
+                'Balas',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -231,11 +269,12 @@ class KomentarCard extends StatelessWidget {
   }
 
   String _getInitials(String name) {
-    final parts = name.split(' ');
+    if (name.isEmpty) return '?';
+    final parts = name.trim().split(' ').where((s) => s.isNotEmpty).toList();
     if (parts.length >= 2) {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
-    return name.substring(0, min(2, name.length)).toUpperCase();
+    return name.substring(0, name.length > 1 ? 2 : 1).toUpperCase();
   }
 
   String _formatRelativeTime(DateTime dateTime) {
@@ -253,5 +292,3 @@ class KomentarCard extends StatelessWidget {
     }
   }
 }
-
-int min(int a, int b) => a < b ? a : b;

@@ -68,3 +68,13 @@ backend/wire_gen.go
 
 # OS
 Thumbs.db
+
+# Claude Code
+.claude/
+backend/.claude/
+
+# Project specific
+Debug SS/
+openspec/
+supabase/
+ENV_SETUP.md

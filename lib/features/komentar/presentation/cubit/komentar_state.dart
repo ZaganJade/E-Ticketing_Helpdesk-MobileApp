@@ -1,5 +1,14 @@
 part of 'komentar_cubit.dart';
 
+/// Helper to compare two lists of komentar by their IDs
+bool _listsEqual(List<Komentar> a, List<Komentar> b) {
+  if (a.length != b.length) return false;
+  for (int i = 0; i < a.length; i++) {
+    if (a[i].id != b[i].id) return false;
+  }
+  return true;
+}
+
 /// Base class for all komentar states
 abstract class KomentarState extends Equatable {
   const KomentarState();
@@ -49,7 +58,12 @@ class KomentarLoaded extends KomentarState {
   }
 
   @override
-  List<Object?> get props => [komentarList, hasNewKomentar, newKomentarId];
+  List<Object?> get props => [
+        // Use a unique key based on IDs for proper list comparison
+        komentarList.map((k) => k.id).join(','),
+        hasNewKomentar,
+        newKomentarId,
+      ];
 }
 
 /// Error state

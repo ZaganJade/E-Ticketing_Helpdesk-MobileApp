@@ -18,16 +18,15 @@ class KomentarModel {
   });
 
   factory KomentarModel.fromJson(Map<String, dynamic> json) {
-    final pengguna = json['pengguna'] as Map<String, dynamic>?;
-
+    // Backend returns flat fields: penulis_nama, penulis_peran
     return KomentarModel(
       id: json['id'] as String,
       tiketId: json['tiket_id'] as String,
       penulisId: json['penulis_id'] as String,
       isiPesan: json['isi_pesan'] as String,
       dibuatPada: DateTime.parse(json['dibuat_pada'] as String),
-      penulisNama: pengguna?['nama'] as String?,
-      penulisPeran: pengguna?['peran'] as String?,
+      penulisNama: json['penulis_nama'] as String?,
+      penulisPeran: json['penulis_peran'] as String?,
     );
   }
 

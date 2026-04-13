@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/supabase-community/postgrest-go"
@@ -42,7 +43,7 @@ func (r *SupabaseKomentarRepository) Create(ctx context.Context, komentar *entit
 // GetByID retrieves a comment by ID
 func (r *SupabaseKomentarRepository) GetByID(ctx context.Context, id uuid.UUID) (*entities.Komentar, error) {
 	query := r.client.GetTable("komentar").
-		Select("*, penulis:pengguna(nama, peran)", "", false).
+		Select("*, pengguna!inner(nama, peran)", "", false).
 		Eq("id", id.String()).
 		Single()
 
@@ -60,7 +61,7 @@ func (r *SupabaseKomentarRepository) GetByID(ctx context.Context, id uuid.UUID) 
 // GetByTiketID retrieves all comments for a ticket
 func (r *SupabaseKomentarRepository) GetByTiketID(ctx context.Context, tiketID uuid.UUID) ([]*entities.Komentar, error) {
 	query := r.client.GetTable("komentar").
-		Select("*, penulis:pengguna(nama, peran)", "", false).
+		Select("*, pengguna!inner(nama, peran)", "", false).
 		Eq("tiket_id", tiketID.String()).
 		Order("dibuat_pada", &postgrest.OrderOpts{Ascending: true})
 
@@ -101,20 +102,65 @@ func (r *SupabaseKomentarRepository) CountByTiketID(ctx context.Context, tiketID
 	return count, nil
 }
 
-// Helper methods
+// Helper struct to parse nested pengguna data from Supabase join
+type komentarWithPengguna struct {
+	ID         string                 `json:"id"`
+	TiketID    string                 `json:"tiket_id"`
+	PenulisID  string                 `json:"penulis_id"`
+	IsiPesan   string                 `json:"isi_pesan"`
+	DibuatPada string                 `json:"dibuat_pada"`
+	Pengguna   map[string]interface{} `json:"pengguna"`
+}
 
 func (r *SupabaseKomentarRepository) parseKomentar(data []byte) (*entities.Komentar, error) {
-	var k entities.Komentar
-	if err := json.Unmarshal(data, &k); err != nil {
+	var raw komentarWithPengguna
+	if err := json.Unmarshal(data, &raw); err != nil {
 		return nil, fmt.Errorf("failed to parse comment: %w", err)
 	}
-	return &k, nil
+	return r.convertToEntity(&raw), nil
 }
 
 func (r *SupabaseKomentarRepository) parseKomentarList(data []byte) ([]*entities.Komentar, error) {
-	var comments []*entities.Komentar
-	if err := json.Unmarshal(data, &comments); err != nil {
+	var rawList []*komentarWithPengguna
+	if err := json.Unmarshal(data, &rawList); err != nil {
 		return nil, fmt.Errorf("failed to parse comment list: %w", err)
 	}
+
+	comments := make([]*entities.Komentar, len(rawList))
+	for i, raw := range rawList {
+		comments[i] = r.convertToEntity(raw)
+	}
 	return comments, nil
+}
+
+func (r *SupabaseKomentarRepository) convertToEntity(raw *komentarWithPengguna) *entities.Komentar {
+	// Parse UUIDs
+	id, _ := uuid.Parse(raw.ID)
+	tiketID, _ := uuid.Parse(raw.TiketID)
+	penulisID, _ := uuid.Parse(raw.PenulisID)
+
+	// Parse timestamp
+	dibuatPada, _ := time.Parse(time.RFC3339, raw.DibuatPada)
+
+	// Extract pengguna data
+	nama := "Unknown"
+	peranStr := "pengguna"
+	if raw.Pengguna != nil {
+		if n, ok := raw.Pengguna["nama"].(string); ok && n != "" {
+			nama = n
+		}
+		if p, ok := raw.Pengguna["peran"].(string); ok && p != "" {
+			peranStr = p
+		}
+	}
+
+	return &entities.Komentar{
+		ID:           id,
+		TiketID:      tiketID,
+		PenulisID:    penulisID,
+		IsiPesan:     raw.IsiPesan,
+		DibuatPada:   dibuatPada,
+		PenulisNama:  nama,
+		PenulisPeran: entities.Role(peranStr),
+	}
 }

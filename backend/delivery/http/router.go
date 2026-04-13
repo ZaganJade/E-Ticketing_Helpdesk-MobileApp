@@ -91,7 +91,7 @@ func (r *Router) SetupRoutes() {
 		}
 
 		// Komentar
-		komentars := protected.Group("/tikets/:tiket_id/komentars")
+		komentars := protected.Group("/tikets/:id/komentars")
 		{
 			komentars.GET("", r.komentarHandler.GetKomentarList)
 			komentars.POST("", r.komentarHandler.AddKomentar)
@@ -106,7 +106,7 @@ func (r *Router) SetupRoutes() {
 		}
 
 		// Lampiran
-		lampirans := protected.Group("/tikets/:tiket_id/lampirans")
+		lampirans := protected.Group("/tikets/:id/lampirans")
 		{
 			lampirans.GET("", r.lampiranHandler.GetLampiranList)
 			lampirans.POST("/upload", r.lampiranHandler.UploadLampiran)
