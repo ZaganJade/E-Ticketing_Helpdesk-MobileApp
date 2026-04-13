@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Ticketing API Test Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+        .method-get { background: #10b981; }
+        .method-post { background: #3b82f6; }
+        .method-patch { background: #f59e0b; }
+        .method-delete { background: #ef4444; }
+        .json-key { color: #8b5cf6; }
+        .json-string { color: #10b981; }
+        .json-number { color: #f59e0b; }
+        .json-boolean { color: #ec4899; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <div class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-flask text-2xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold">API Test Dashboard</h1>
+                        <p class="text-white/80 text-sm">E-Ticketing Helpdesk Backend Tester</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm text-white/80">Base URL</div>
+                    <div class="font-mono text-sm bg-black/20 px-3 py-1 rounded-lg">http://localhost:8080/api</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-6">
+        <!-- Token Section -->
+        <div class="glass rounded-2xl shadow-sm border border-gray-200 p-6 mb-6 card-hover">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-key text-indigo-600"></i>
+                </div>
+                <h2 class="text-lg font-semibold text-gray-800">Authentication Token</h2>
+            </div>
+            <div class="flex gap-2">
+                <input type="text" id="token" placeholder="Token will appear here after login..."
+                    class="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-mono text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <button onclick="copyToken()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-600 transition-colors" title="Copy Token">
+                    <i class="fas fa-copy"></i>
+                </button>
+                <button onclick="clearToken()" class="px-4 py-2 bg-red-100 hover:bg-red-200 rounded-xl text-red-600 transition-colors" title="Clear Token">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="grid lg:grid-cols-2 gap-6">
+            <!-- Auth Section -->
+            <div class="space-y-6">
+                <!-- Register Card -->
+                <div class="glass rounded-2xl shadow-sm border border-gray-200 p-6 card-hover">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="method-post text-white text-xs font-bold px-2 py-1 rounded">POST</span>
+                        <h3 class="text-lg font-semibold text-gray-800">Register</h3>
+                        <span class="text-sm text-gray-500">/auth/register</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs font-medium text-gray-500 uppercase">Nama</label>
+                            <input type="text" id="regNama" value="Budi Santoso"
+                                class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-500 uppercase">Email</label>
+                            <input type="email" id="regEmail" value="budi@gmail.com"
+                                class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-500 uppercase">Password</label>
+                            <input type="password" id="regPassword" value="12345678"
+                                class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <button onclick="testRegister()" class="w-full py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-xl transition-all flex items-center justify-center gap-2">
+                            <i class="fas fa-user-plus"></i> Register
+                        </button>
+                    </div>
+                    <div id="regResult" class="hidden mt-4"></div>
+                </div>
+
+                <!-- Login Card -->
+                <div class="glass rounded-2xl shadow-sm border border-gray-200 p-6 card-hover">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="method-post text-white text-xs font-bold px-2 py-1 rounded">POST</span>
+                        <h3 class="text-lg font-semibold text-gray-800">Login</h3>
+                        <span class="text-sm text-gray-500">/auth/login</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs font-medium text-gray-500 uppercase">Email</label>
+                            <input type="email" id="loginEmail" value="budi@gmail.com"
+                                class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-500 uppercase">Password</label>
+                            <input type="password" id="loginPassword" value="12345678"
+                                class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <button onclick="testLogin()" class="w-full py-2.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium rounded-xl transition-all flex items-center justify-center gap-2">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </button>
+                    </div>
+                    <div id="loginResult" class="hidden mt-4"></div>
+                </div>
+            </div>
+
+            <!-- Tiket Section -->
+            <div class="space-y-6">
+                <!-- Get My Info -->
+                <div class="glass rounded-2xl shadow-sm border border-gray-200 p-6 card-hover">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="method-get text-white text-xs font-bold px-2 py-1 rounded">GET</span>
+                        <h3 class="text-lg font-semibold text-gray-800">Get Current User</h3>
+                        <span class="text-sm text-gray-500">/auth/me</span>
+                    </div>
+                    <button onclick="testMe()" class="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-xl transition-all flex items-center justify-center gap-2">
+                        <i class="fas fa-user"></i> Get User Info
+                    </button>
+                    <div id="meResult" class="hidden mt-4"></div>
+                </div>
+
+                <!-- List Tikets -->
+                <div class="glass rounded-2xl shadow-sm border border-gray-200 p-6 card-hover">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="method-get text-white text-xs font-bold px-2 py-1 rounded">GET</span>
+                        <h3 class="text-lg font-semibold text-gray-800">List Tikets</h3>
+                        <span class="text-sm text-gray-500">/tikets</span>
+                    </div>
+                    <button onclick="testTikets()" class="w-full py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-medium rounded-xl transition-all flex items-center justify-center gap-2">
+                        <i class="fas fa-list"></i> Get All Tikets
+                    </button>
+                    <div id="tiketsResult" class="hidden mt-4"></div>
+                </div>
+
+                <!-- Create Tiket -->
+                <div class="glass rounded-2xl shadow-sm border border-gray-200 p-6 card-hover">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="method-post text-white text-xs font-bold px-2 py-1 rounded">POST</span>
+                        <h3 class="text-lg font-semibold text-gray-800">Create Tiket</h3>
+                        <span class="text-sm text-gray-500">/tikets</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs font-medium text-gray-500 uppercase">Judul</label>
+                            <input type="text" id="tiketJudul" value="Tiket Baru"
+                                class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-500 uppercase">Deskripsi</label>
+                            <textarea id="tiketDeskripsi" rows="2" placeholder="Minimal 10 karakter..."
+                                class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">Ini adalah deskripsi tiket test dari dashboard</textarea>
+                        </div>
+                        <button onclick="testCreateTiket()" class="w-full py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-medium rounded-xl transition-all flex items-center justify-center gap-2">
+                            <i class="fas fa-plus-circle"></i> Create Tiket
+                        </button>
+                    </div>
+                    <div id="createResult" class="hidden mt-4"></div>
+                </div>
+
+                <!-- Update Status -->
+                <div class="glass rounded-2xl shadow-sm border border-gray-200 p-6 card-hover">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="method-patch text-white text-xs font-bold px-2 py-1 rounded">PATCH</span>
+                        <h3 class="text-lg font-semibold text-gray-800">Update Tiket Status</h3>
+                        <span class="text-sm text-gray-500">/tikets/{id}/status</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs font-medium text-gray-500 uppercase">Tiket ID</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="tiketId" placeholder="UUID tiket..."
+                                    class="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl font-mono text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <button onclick="pasteTiketId()" class="px-3 bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-600" title="Paste from clipboard">
+                                    <i class="fas fa-paste"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-500 uppercase">Status Baru</label>
+                            <select id="statusSelect" class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="TERBUKA">🔴 TERBUKA</option>
+                                <option value="DIPROSES" selected>🟡 DIPROSES</option>
+                                <option value="SELESAI">🟢 SELESAI</option>
+                            </select>
+                        </div>
+                        <button onclick="testUpdateStatus()" class="w-full py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-medium rounded-xl transition-all flex items-center justify-center gap-2">
+                            <i class="fas fa-sync-alt"></i> Update Status
+                        </button>
+                    </div>
+                    <div id="updateResult" class="hidden mt-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BASE = 'http://localhost:8080/api';
+        let lastCreatedTiketId = null;
+
+        function syntaxHighlight(json) {
+            if (typeof json !== 'string') json = JSON.stringify(json, null, 2);
+            return json.replace(/(".*?"):\s*/g, '<span class="json-key">$1</span>: ')
+                      .replace(/: "(.*?)"/g, ': <span class="json-string">"$1"</span>')
+                      .replace(/: (\d+)/g, ': <span class="json-number">$1</span>')
+                      .replace(/: (true|false)/g, ': <span class="json-boolean">$1</span>');
+        }
+
+        function showResult(elementId, data, isError = false) {
+            const el = document.getElementById(elementId);
+            el.classList.remove('hidden');
+            el.className = `mt-4 p-4 rounded-xl font-mono text-sm overflow-auto ${isError ? 'bg-red-50 border border-red-200 text-red-800' : 'bg-gray-900 text-green-400'}`;
+
+            if (typeof data === 'object') {
+                el.innerHTML = `<pre>${syntaxHighlight(data)}</pre>`;
+            } else {
+                el.textContent = data;
+            }
+        }
+
+        async function api(method, path, body = null, auth = false) {
+            try {
+                const headers = { 'Content-Type': 'application/json' };
+                const token = document.getElementById('token').value;
+                if (auth && token) headers['Authorization'] = 'Bearer ' + token;
+
+                console.log(`[${method}] ${BASE}${path}`, body);
+
+                const res = await fetch(BASE + path, {
+                    method,
+                    headers,
+                    body: body ? JSON.stringify(body) : null
+                });
+
+                const data = await res.json().catch(() => ({}));
+                console.log('Response:', res.status, data);
+
+                return { ok: res.ok, status: res.status, data };
+            } catch (e) {
+                console.error('Error:', e);
+                return { ok: false, status: 0, data: { error: e.message } };
+            }
+        }
+
+        function copyToken() {
+            const token = document.getElementById('token');
+            token.select();
+            document.execCommand('copy');
+            alert('Token copied!');
+        }
+
+        function clearToken() {
+            document.getElementById('token').value = '';
+        }
+
+        async function pasteTiketId() {
+            try {
+                const text = await navigator.clipboard.readText();
+                document.getElementById('tiketId').value = text;
+            } catch (err) {
+                alert('Could not read clipboard');
+            }
+        }
+
+        async function testRegister() {
+            const result = await api('POST', '/auth/register', {
+                nama: document.getElementById('regNama').value,
+                email: document.getElementById('regEmail').value,
+                password: document.getElementById('regPassword').value
+            });
+            showResult('regResult', result.data, !result.ok);
+        }
+
+        async function testLogin() {
+            const result = await api('POST', '/auth/login', {
+                email: document.getElementById('loginEmail').value,
+                password: document.getElementById('loginPassword').value
+            });
+            showResult('loginResult', result.data, !result.ok);
+
+            if (result.ok && result.data.token) {
+                document.getElementById('token').value = result.data.token;
+                // Auto-fill tiket ID if available
+                if (result.data.id) {
+                    document.getElementById('tiketId').value = result.data.id;
+                }
+            }
+        }
+
+        async function testMe() {
+            const result = await api('GET', '/auth/me', null, true);
+            showResult('meResult', result.data, !result.ok);
+        }
+
+        async function testTikets() {
+            const result = await api('GET', '/tikets', null, true);
+            showResult('tiketsResult', result.data, !result.ok);
+        }
+
+        async function testCreateTiket() {
+            const result = await api('POST', '/tikets', {
+                judul: document.getElementById('tiketJudul').value + ' ' + new Date().toLocaleTimeString(),
+                deskripsi: document.getElementById('tiketDeskripsi').value
+            }, true);
+            showResult('createResult', result.data, !result.ok);
+
+            if (result.ok && result.data.id) {
+                lastCreatedTiketId = result.data.id;
+                document.getElementById('tiketId').value = result.data.id;
+            }
+        }
+
+        async function testUpdateStatus() {
+            const tiketId = document.getElementById('tiketId').value;
+            const rawStatus = document.getElementById('statusSelect').value;
+            const status = rawStatus.toUpperCase();
+
+            if (!tiketId) {
+                showResult('updateResult', { error: 'Tiket ID harus diisi!' }, true);
+                return;
+            }
+
+            const result = await api('PATCH', `/tikets/${tiketId}/status`, {
+                status: status
+            }, true);
+            showResult('updateResult', result.data, !result.ok);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API E-Ticketing Helpdesk</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #2196F3;
+            border-bottom: 2px solid #2196F3;
+            padding-bottom: 10px;
+        }
+        .endpoint {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: start;
+        }
+        .endpoint input, .endpoint select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .endpoint input[type="text"], .endpoint input[type="email"], .endpoint input[type="password"] {
+            flex: 1;
+        }
+        .method {
+            padding: 8px 15px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            min-width: 70px;
+            text-align: center;
+        }
+        .method.post { background: #4CAF50; color: white; }
+        .method.get { background: #2196F3; color: white; }
+        .method.patch { background: #FF9800; color: white; }
+        .method.delete { background: #f44336; color: white; }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary { background: #2196F3; color: white; }
+        .btn-success { background: #4CAF50; color: white; }
+        .btn:hover { opacity: 0.9; }
+        .response {
+            background: #263238;
+            color: #aed581;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+            min-height: 50px;
+            white-space: pre-wrap;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+        }
+        .response.error { color: #ff8a80; }
+        .token-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .token-box input {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+        }
+        .hidden { display: none; }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+            font-size: 13px;
+        }
+        .form-group {
+            margin-bottom: 10px;
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎫 Test API E-Ticketing Helpdesk</h1>
+    <p style="text-align: center; color: #666;">Base URL: http://localhost:8080/api</p>
+
+    <div class="token-box">
+        <strong>🔑 Token (Auto-filled after login)</strong>
+        <input type="text" id="authToken" placeholder="Paste token here or it will auto-fill after login">
+    </div>
+
+    <!-- Public Endpoints -->
+    <div class="section">
+        <h2>🔓 Public Endpoints</h2>
+
+        <!-- Register -->
+        <div class="endpoint">
+            <span class="method post">POST</span>
+            <div style="flex: 1;">
+                <strong>/auth/register</strong>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nama</label>
+                        <input type="text" id="regNama" value="Budi Santoso">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="regEmail" value="budi@gmail.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="regPassword" value="12345678">
+                    </div>
+                </div>
+                <div class="response hidden" id="regResponse"></div>
+            </div>
+            <button class="btn btn-success" onclick="register()">Send</button>
+        </div>
+
+        <!-- Login -->
+        <div class="endpoint">
+            <span class="method post">POST</span>
+            <div style="flex: 1;">
+                <strong>/auth/login</strong>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="loginEmail" value="budi@gmail.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="loginPassword" value="12345678">
+                    </div>
+                </div>
+                <div class="response hidden" id="loginResponse"></div>
+            </div>
+            <button class="btn btn-primary" onclick="login()">Send</button>
+        </div>
+    </div>
+
+    <!-- Protected Endpoints -->
+    <div class="section">
+        <h2>🔒 Protected Endpoints (Need Token)</h2>
+
+        <!-- Get Current User -->
+        <div class="endpoint">
+            <span class="method get">GET</span>
+            <div style="flex: 1;">
+                <strong>/auth/me</strong>
+                <div class="response hidden" id="meResponse"></div>
+            </div>
+            <button class="btn btn-primary" onclick="getMe()">Send</button>
+        </div>
+
+        <!-- Create Ticket -->
+        <div class="endpoint">
+            <span class="method post">POST</span>
+            <div style="flex: 1;">
+                <strong>/tikets</strong>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Judul</label>
+                        <input type="text" id="tiketJudul" value="Masalah Komputer">
+                    </div>
+                    <div class="form-group">
+                        <label>Deskripsi</label>
+                        <input type="text" id="tiketDeskripsi" value="Komputer tidak bisa nyala">
+                    </div>
+                </div>
+                <div class="response hidden" id="createTiketResponse"></div>
+            </div>
+            <button class="btn btn-success" onclick="createTiket()">Send</button>
+        </div>
+
+        <!-- List Tickets -->
+        <div class="endpoint">
+            <span class="method get">GET</span>
+            <div style="flex: 1;">
+                <strong>/tikets</strong>
+                <div class="response hidden" id="listTiketResponse"></div>
+            </div>
+            <button class="btn btn-primary" onclick="listTikets()">Send</button>
+        </div>
+
+        <!-- Get Ticket Detail -->
+        <div class="endpoint">
+            <span class="method get">GET</span>
+            <div style="flex: 1;">
+                <strong>/tikets/:id</strong>
+                <div class="form-group">
+                    <label>Ticket ID</label>
+                    <input type="text" id="tiketIdDetail" placeholder="Enter ticket ID">
+                </div>
+                <div class="response hidden" id="detailTiketResponse"></div>
+            </div>
+            <button class="btn btn-primary" onclick="getTiketDetail()">Send</button>
+        </div>
+
+        <!-- Update Ticket Status -->
+        <div class="endpoint">
+            <span class="method patch">PATCH</span>
+            <div style="flex: 1;">
+                <strong>/tikets/:id/status</strong>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Ticket ID</label>
+                        <input type="text" id="tiketIdStatus" placeholder="Enter ticket ID">
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="tiketStatus">
+                            <option value="terbuka">Terbuka</option>
+                            <option value="diproses" selected>Diproses</option>
+                            <option value="selesai">Selesai</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="response hidden" id="updateStatusResponse"></div>
+            </div>
+            <button class="btn btn-primary" onclick="updateStatus()">Send</button>
+        </div>
+
+        <!-- Add Comment -->
+        <div class="endpoint">
+            <span class="method post">POST</span>
+            <div style="flex: 1;">
+                <strong>/tikets/:id/komentars</strong>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Ticket ID</label>
+                        <input type="text" id="tiketIdKomentar" placeholder="Enter ticket ID">
+                    </div>
+                    <div class="form-group">
+                        <label>Isi Pesan</label>
+                        <input type="text" id="komentarPesan" value="Sedang ditangani">
+                    </div>
+                </div>
+                <div class="response hidden" id="komentarResponse"></div>
+            </div>
+            <button class="btn btn-success" onclick="addKomentar()">Send</button>
+        </div>
+
+        <!-- Get Dashboard Stats -->
+        <div class="endpoint">
+            <span class="method get">GET</span>
+            <div style="flex: 1;">
+                <strong>/dashboard/stats</strong>
+                <div class="response hidden" id="statsResponse"></div>
+            </div>
+            <button class="btn btn-primary" onclick="getStats()">Send</button>
+        </div>
+
+        <!-- Get Notifications -->
+        <div class="endpoint">
+            <span class="method get">GET</span>
+            <div style="flex: 1;">
+                <strong>/notifikasis</strong>
+                <div class="response hidden" id="notifikasiResponse"></div>
+            </div>
+            <button class="btn btn-primary" onclick="getNotifikasi()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://localhost:8080/api';
+
+        function getToken() {
+            return document.getElementById('authToken').value;
+        }
+
+        function setToken(token) {
+            document.getElementById('authToken').value = token;
+        }
+
+        function showResponse(elementId, data, isError = false) {
+            const el = document.getElementById(elementId);
+            el.classList.remove('hidden', 'error');
+            if (isError) el.classList.add('error');
+            el.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+        }
+
+        async function makeRequest(url, method, body = null, auth = false) {
+            const headers = { 'Content-Type': 'application/json' };
+            if (auth && getToken()) {
+                headers['Authorization'] = 'Bearer ' + getToken();
+            }
+
+            const options = {
+                method,
+                headers
+            };
+            if (body) options.body = JSON.stringify(body);
+
+            try {
+                const response = await fetch(url, options);
+                const data = await response.json().catch(() => ({ status: response.status }));
+                return { ok: response.ok, data, status: response.status };
+            } catch (error) {
+                return { ok: false, data: { error: error.message }, status: 0 };
+            }
+        }
+
+        async function register() {
+            const result = await makeRequest(
+                `${BASE_URL}/auth/register`,
+                'POST',
+                {
+                    nama: document.getElementById('regNama').value,
+                    email: document.getElementById('regEmail').value,
+                    password: document.getElementById('regPassword').value
+                }
+            );
+            showResponse('regResponse', result.data, !result.ok);
+        }
+
+        async function login() {
+            const result = await makeRequest(
+                `${BASE_URL}/auth/login`,
+                'POST',
+                {
+                    email: document.getElementById('loginEmail').value,
+                    password: document.getElementById('loginPassword').value
+                }
+            );
+            showResponse('loginResponse', result.data, !result.ok);
+
+            // Auto-fill token if exists (adapt to your API response)
+            if (result.ok && result.data.token) {
+                setToken(result.data.token);
+                alert('✅ Login berhasil! Token sudah diisi otomatis.');
+            } else {
+                console.log('⚠️ Response received:', result.data);
+            }
+        }
+
+        async function getMe() {
+            const result = await makeRequest(`${BASE_URL}/auth/me`, 'GET', null, true);
+            showResponse('meResponse', result.data, !result.ok);
+        }
+
+        async function createTiket() {
+            const result = await makeRequest(
+                `${BASE_URL}/tikets`,
+                'POST',
+                {
+                    judul: document.getElementById('tiketJudul').value,
+                    deskripsi: document.getElementById('tiketDeskripsi').value
+                },
+                true
+            );
+            showResponse('createTiketResponse', result.data, !result.ok);
+
+            // Save ticket ID for other tests
+            if (result.ok && result.data.id) {
+                document.getElementById('tiketIdDetail').value = result.data.id;
+                document.getElementById('tiketIdStatus').value = result.data.id;
+                document.getElementById('tiketIdKomentar').value = result.data.id;
+            }
+        }
+
+        async function listTikets() {
+            const result = await makeRequest(`${BASE_URL}/tikets`, 'GET', null, true);
+            showResponse('listTiketResponse', result.data, !result.ok);
+        }
+
+        async function getTiketDetail() {
+            const id = document.getElementById('tiketIdDetail').value;
+            if (!id) {
+                showResponse('detailTiketResponse', { error: 'Please enter ticket ID' }, true);
+                return;
+            }
+            const result = await makeRequest(`${BASE_URL}/tikets/${id}`, 'GET', null, true);
+            showResponse('detailTiketResponse', result.data, !result.ok);
+        }
+
+        async function updateStatus() {
+            const id = document.getElementById('tiketIdStatus').value;
+            if (!id) {
+                showResponse('updateStatusResponse', { error: 'Please enter ticket ID' }, true);
+                return;
+            }
+            const result = await makeRequest(
+                `${BASE_URL}/tikets/${id}/status`,
+                'PATCH',
+                { status: document.getElementById('tiketStatus').value },
+                true
+            );
+            showResponse('updateStatusResponse', result.data, !result.ok);
+        }
+
+        async function addKomentar() {
+            const id = document.getElementById('tiketIdKomentar').value;
+            if (!id) {
+                showResponse('komentarResponse', { error: 'Please enter ticket ID' }, true);
+                return;
+            }
+            const result = await makeRequest(
+                `${BASE_URL}/tikets/${id}/komentars`,
+                'POST',
+                { isi_pesan: document.getElementById('komentarPesan').value },
+                true
+            );
+            showResponse('komentarResponse', result.data, !result.ok);
+        }
+
+        async function getStats() {
+            const result = await makeRequest(`${BASE_URL}/dashboard/stats`, 'GET', null, true);
+            showResponse('statsResponse', result.data, !result.ok);
+        }
+
+        async function getNotifikasi() {
+            const result = await makeRequest(`${BASE_URL}/notifikasis`, 'GET', null, true);
+            showResponse('notifikasiResponse', result.data, !result.ok);
+        }
+    </script>
+</body>
+</html>

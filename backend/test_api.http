@@ -1,0 +1,73 @@
+### Test API E-Ticketing Helpdesk
+
+### 1. Register User
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "nama": "Test User",
+  "email": "test@example.com",
+  "password": "password123"
+}
+
+### 2. Login User
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "password123"
+}
+
+### 3. Get Current User (needs token)
+GET http://localhost:8080/api/auth/me
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 4. Create Ticket (needs token)
+POST http://localhost:8080/api/tikets
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "judul": "Tiket Test",
+  "deskripsi": "Ini adalah tiket test",
+  "kategori": "umum"
+}
+
+### 5. List Tickets (needs token)
+GET http://localhost:8080/api/tikets
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 6. Get Ticket Detail (needs token)
+GET http://localhost:8080/api/tikets/123e4567-e89b-12d3-a456-426614174000
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 7. Update Ticket Status (needs token)
+PATCH http://localhost:8080/api/tikets/123e4567-e89b-12d3-a456-426614174000/status
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "status": "diproses"
+}
+
+### 8. Add Comment (needs token)
+POST http://localhost:8080/api/tikets/123e4567-e89b-12d3-a456-426614174000/komentars
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "isi_pesan": "Ini komentar test"
+}
+
+### 9. Get Dashboard Stats (needs token)
+GET http://localhost:8080/api/dashboard/stats
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 10. Get Notifications (needs token)
+GET http://localhost:8080/api/notifikasis
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 11. Mark Notification Read (needs token)
+PATCH http://localhost:8080/api/notifikasis/123e4567-e89b-12d3-a456-426614174000/read
+Authorization: Bearer YOUR_TOKEN_HERE
