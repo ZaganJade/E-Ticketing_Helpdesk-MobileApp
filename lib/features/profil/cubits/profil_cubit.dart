@@ -1,35 +1,58 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:equatable/equatable.dart';
 import 'package:logger/logger.dart';
 import '../models/profil_model.dart';
 import '../repositories/profil_repository.dart';
 
 // States
-abstract class ProfilState {}
+abstract class ProfilState extends Equatable {
+  const ProfilState();
 
-class ProfilInitial extends ProfilState {}
+  @override
+  List<Object?> get props => [];
+}
 
-class ProfilLoading extends ProfilState {}
+class ProfilInitial extends ProfilState {
+  const ProfilInitial();
+}
+
+class ProfilLoading extends ProfilState {
+  const ProfilLoading();
+}
 
 class ProfilLoaded extends ProfilState {
   final ProfilModel profil;
 
-  ProfilLoaded({required this.profil});
+  const ProfilLoaded({required this.profil});
+
+  @override
+  List<Object?> get props => [profil];
 }
 
 class ProfilUpdated extends ProfilState {
   final ProfilModel profil;
 
-  ProfilUpdated({required this.profil});
+  const ProfilUpdated({required this.profil});
+
+  @override
+  List<Object?> get props => [profil];
 }
 
-class PasswordUpdated extends ProfilState {}
+class PasswordUpdated extends ProfilState {
+  const PasswordUpdated();
+}
 
-class LoggedOut extends ProfilState {}
+class LoggedOut extends ProfilState {
+  const LoggedOut();
+}
 
 class ProfilError extends ProfilState {
   final String message;
 
-  ProfilError({required this.message});
+  const ProfilError({required this.message});
+
+  @override
+  List<Object?> get props => [message];
 }
 
 // Cubit
@@ -37,12 +60,12 @@ class ProfilCubit extends Cubit<ProfilState> {
   final ProfilRepository _repository = ProfilRepository();
   final Logger _logger = Logger();
 
-  ProfilCubit() : super(ProfilInitial());
+  ProfilCubit() : super(const ProfilInitial());
 
   // Load profil
   Future<void> loadProfil() async {
     _logger.i('[ProfilCubit] loadProfil called');
-    emit(ProfilLoading());
+    emit(const ProfilLoading());
 
     try {
       final profil = await _repository.getProfil();
@@ -56,7 +79,7 @@ class ProfilCubit extends Cubit<ProfilState> {
 
   // Update nama
   Future<void> updateNama(String nama) async {
-    emit(ProfilLoading());
+    emit(const ProfilLoading());
 
     try {
       final profil = await _repository.updateNama(nama);
@@ -71,14 +94,14 @@ class ProfilCubit extends Cubit<ProfilState> {
     required String oldPassword,
     required String newPassword,
   }) async {
-    emit(ProfilLoading());
+    emit(const ProfilLoading());
 
     try {
       await _repository.updatePassword(
         oldPassword: oldPassword,
         newPassword: newPassword,
       );
-      emit(PasswordUpdated());
+      emit(const PasswordUpdated());
     } catch (e) {
       emit(ProfilError(message: e.toString()));
     }
@@ -86,11 +109,11 @@ class ProfilCubit extends Cubit<ProfilState> {
 
   // Logout
   Future<void> logout() async {
-    emit(ProfilLoading());
+    emit(const ProfilLoading());
 
     try {
       await _repository.logout();
-      emit(LoggedOut());
+      emit(const LoggedOut());
     } catch (e) {
       emit(ProfilError(message: e.toString()));
     }

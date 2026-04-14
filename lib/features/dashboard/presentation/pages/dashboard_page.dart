@@ -1,26 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../../../core/di/injection.dart';
-import '../../../../core/theme/app_spacing.dart';
-import '../../../../shared/widgets/error_state.dart';
-import '../../../../shared/widgets/app_refresh.dart';
+import '../../../../core/theme/shadcn_theme.dart';
 import '../../../auth/domain/entities/pengguna.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../tiket/domain/entities/tiket.dart';
 import '../../domain/entities/dashboard_stats.dart';
-import '../../domain/entities/tiket_status_stats.dart';
 import '../cubit/dashboard_cubit.dart';
 import '../widgets/greeting_section.dart';
-import '../widgets/progress_indicator.dart';
-import '../widgets/quick_actions.dart';
 import '../widgets/stat_card.dart';
+import '../widgets/quick_actions.dart';
 import '../widgets/tiket_recent_list.dart';
 import '../widgets/tiket_saya_section.dart';
 import '../widgets/tiket_terbuka_section.dart';
+import '../widgets/progress_indicator.dart';
+import '../widgets/responsive_layout.dart';
 
-/// Main dashboard page for the application
+/// Brutalist Modern Dashboard using shadcn_ui
+/// Optimized: Removed stagger animations, added RepaintBoundary, ResponsiveBuilder
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
 
@@ -49,12 +50,12 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _onBuatTiket() {
-    // Navigate to create ticket page
+    HapticFeedback.mediumImpact();
     context.push('/tiket/create');
   }
 
   void _onLihatSemuaTiket() {
-    // Navigate to ticket list page - handled by bottom nav
+    context.push('/tiket');
   }
 
   void _onTapTiket(Tiket tiket) {
@@ -62,25 +63,47 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _onAmbilTiket(String tiketId) {
+    HapticFeedback.mediumImpact();
     _dashboardCubit.ambilTiket(tiketId);
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return BlocProvider.value(
       value: _dashboardCubit,
       child: Scaffold(
-        body: BlocBuilder<DashboardCubit, DashboardState>(
-          builder: (context, state) {
-            return _buildContent(state);
-          },
+        backgroundColor: isDark ? ShadcnTheme.darkBackground : ShadcnTheme.background,
+        body: SafeArea(
+          child: ResponsiveBuilder(
+            builder: (context, responsive) {
+              return BlocBuilder<DashboardCubit, DashboardState>(
+                buildWhen: (previous, current) {
+                  // Only rebuild when major state changes, not for every refresh tick
+                  if (previous.runtimeType != current.runtimeType) return true;
+                  if (current is DashboardLoaded && previous is DashboardLoaded) {
+                    // Compare meaningful data changes
+                    return current.stats.totalTiket != previous.stats.totalTiket ||
+                        current.stats.tiketTerbaru.length != previous.stats.tiketTerbaru.length ||
+                        current.tiketTerbuka.length != previous.tiketTerbuka.length ||
+                        current.tiketSaya.length != previous.tiketSaya.length ||
+                        current.isRefreshing != previous.isRefreshing;
+                  }
+                  return true;
+                },
+                builder: (context, state) {
+                  return _buildContent(context, state, isDark, responsive);
+                },
+              );
+            },
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildContent(DashboardState state) {
-    // Get current user from auth cubit
+  Widget _buildContent(BuildContext context, DashboardState state, bool isDark, ResponsiveLayout responsive) {
     final authState = context.watch<AuthCubit>().state;
     Pengguna? currentUser;
     if (authState is Authenticated) {
@@ -88,149 +111,221 @@ class _DashboardPageState extends State<DashboardPage> {
     }
 
     if (state is DashboardInitial || (state is DashboardLoading && currentUser == null)) {
-      return _buildSkeletonLoading(currentUser);
+      return _buildSkeletonLoading(isDark, responsive);
     }
 
     if (state is DashboardError) {
-      return ErrorState(
-        title: 'Gagal memuat dashboard',
-        subtitle: state.message,
-        onRetry: () => _onRefresh(),
-      );
+      return _buildErrorState(state.message, isDark);
     }
 
     if (state is DashboardLoaded) {
       return _buildDashboardContent(
+        context: context,
         stats: state.stats,
         greeting: state.greeting,
         user: currentUser,
         state: state,
+        isDark: isDark,
+        responsive: responsive,
       );
     }
 
     return const SizedBox.shrink();
   }
 
-  Widget _buildSkeletonLoading(Pengguna? user) {
-    return AppRefreshWrapper(
-      onRefresh: _onRefresh,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(AppSpacing.default_),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Greeting skeleton
-            const GreetingSectionSkeleton(),
-            const SizedBox(height: AppSpacing.xl),
-
-            // Stats skeleton
-            const StatCard(total: 0, isLoading: true),
-            const SizedBox(height: AppSpacing.default_),
-            const StatusStatsRow(
-              stats: TiketStatusStats(terbuka: 0, diproses: 0, selesai: 0),
-              isLoading: true,
+  Widget _buildSkeletonLoading(bool isDark, ResponsiveLayout responsive) {
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        SliverToBoxAdapter(
+          child: RepaintBoundary(
+            child: GreetingSectionSkeleton(isDark: isDark),
+          ),
+        ),
+        SliverPadding(
+          padding: EdgeInsets.all(responsive.horizontalPadding),
+          sliver: SliverToBoxAdapter(
+            child: RepaintBoundary(
+              child: StatCardSkeleton(isDark: isDark),
             ),
-            const SizedBox(height: AppSpacing.xl),
-
-            // Progress indicator skeleton
-            const StatusProgressIndicator(
-              stats: TiketStatusStats(terbuka: 0, diproses: 0, selesai: 0),
-              isLoading: true,
+          ),
+        ),
+        SliverPadding(
+          padding: EdgeInsets.symmetric(horizontal: responsive.horizontalPadding),
+          sliver: SliverToBoxAdapter(
+            child: RepaintBoundary(
+              child: QuickActionsSkeleton(isDark: isDark),
             ),
-            const SizedBox(height: AppSpacing.xl),
-
-            // Recent tickets skeleton
-            TiketRecentList(
-              tiketList: const [],
-              isLoading: true,
-              onViewAll: () {},
+          ),
+        ),
+        SliverPadding(
+          padding: EdgeInsets.all(responsive.horizontalPadding),
+          sliver: SliverToBoxAdapter(
+            child: RepaintBoundary(
+              child: TiketRecentListSkeleton(isDark: isDark),
             ),
-          ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildErrorState(String message, bool isDark) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: ShadCard(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.error_outline_rounded, size: 48, color: ShadcnTheme.destructive),
+                const SizedBox(height: 16),
+                Text('Gagal Memuat Dashboard', style: TextStyles.h4(context)),
+                const SizedBox(height: 8),
+                Text(message, style: TextStyles.muted(context), textAlign: TextAlign.center),
+                const SizedBox(height: 24),
+                ShadButton(
+                  onPressed: _onRefresh,
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [Icon(Icons.refresh_rounded, size: 16), SizedBox(width: 8), Text('Coba Lagi')],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
   Widget _buildDashboardContent({
+    required BuildContext context,
     required DashboardStats stats,
     required String greeting,
     required Pengguna? user,
     required DashboardLoaded state,
+    required bool isDark,
+    required ResponsiveLayout responsive,
   }) {
-    return AppRefreshWrapper(
+    return RefreshIndicator(
       onRefresh: _onRefresh,
-      child: SingleChildScrollView(
+      color: isDark ? ShadcnTheme.primaryForeground : ShadcnTheme.primary,
+      backgroundColor: isDark ? ShadcnTheme.darkCard : ShadcnTheme.card,
+      strokeWidth: 3,
+      edgeOffset: 80,
+      child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(AppSpacing.default_),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Greeting Section (13.4, 13.5)
-            if (user != null) ...[
-              GreetingSection(
+        slivers: [
+          // Header
+          SliverToBoxAdapter(
+            child: RepaintBoundary(
+              child: GreetingSection(
                 greeting: greeting,
                 user: user,
+                isLoading: state.isRefreshing,
               ),
-              const SizedBox(height: AppSpacing.xl),
-            ],
-
-            // Total Tiket Stat Card (13.6)
-            StatCard(
-              total: stats.totalTiket,
-              isLoading: state.isRefreshing,
             ),
-            const SizedBox(height: AppSpacing.default_),
+          ),
 
-            // Status Breakdown Row (13.7)
-            StatusStatsRow(
-              stats: stats.statusStats,
-              isLoading: state.isRefreshing,
-            ),
-            const SizedBox(height: AppSpacing.xl),
-
-            // Progress Indicator / Chart (13.8)
-            StatusProgressIndicator(
-              stats: stats.statusStats,
-              isLoading: state.isRefreshing,
-            ),
-            const SizedBox(height: AppSpacing.xl),
-
-            // Quick Actions (13.14, 13.15)
-            QuickActions(
-              onBuatTiket: _onBuatTiket,
-              onLihatSemuaTiket: _onLihatSemuaTiket,
-            ),
-            const SizedBox(height: AppSpacing.xl),
-
-            // Helpdesk specific: Tiket Terbuka Section (13.16)
-            if (user?.peran == Peran.helpdesk || user?.peran == Peran.admin) ...[
-              TiketTerbukaSection(
-                tiketList: state.tiketTerbuka,
-                isLoading: state.isLoadingTiketTerbuka,
-                onAmbilTiket: _onAmbilTiket,
+          // Stats Overview
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(responsive.horizontalPadding, 8, responsive.horizontalPadding, 8),
+            sliver: SliverToBoxAdapter(
+              child: RepaintBoundary(
+                child: StatCard(
+                  total: stats.totalTiket,
+                  statusStats: stats.statusStats,
+                  isLoading: state.isRefreshing,
+                ),
               ),
-              const SizedBox(height: AppSpacing.xl),
+            ),
+          ),
 
-              // Tiket Saya Section (13.17)
-              TiketSayaSection(
-                tiketList: state.tiketSaya,
-                isLoading: state.isLoadingTiketSaya,
-                onTapTiket: _onTapTiket,
+          // Progress Indicator
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(responsive.horizontalPadding, 8, responsive.horizontalPadding, 8),
+            sliver: SliverToBoxAdapter(
+              child: RepaintBoundary(
+                child: StatusProgressIndicator(
+                  stats: stats.statusStats,
+                  isLoading: state.isRefreshing,
+                ),
               ),
-              const SizedBox(height: AppSpacing.xl),
-            ],
+            ),
+          ),
 
-            // Tiket Terbaru Section (13.11, 13.12, 13.13)
-            TiketRecentList(
-              tiketList: stats.tiketTerbaru,
-              isLoading: state.isRefreshing,
-              onViewAll: _onLihatSemuaTiket,
-              onTapTiket: _onTapTiket,
+          // Quick Actions
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(responsive.horizontalPadding, 8, responsive.horizontalPadding, 8),
+            sliver: SliverToBoxAdapter(
+              child: RepaintBoundary(
+                child: QuickActions(
+                  onBuatTiket: _onBuatTiket,
+                  onLihatSemuaTiket: _onLihatSemuaTiket,
+                ),
+              ),
+            ),
+          ),
+
+          // Helpdesk Sections
+          if (user?.peran == Peran.helpdesk || user?.peran == Peran.admin) ...[
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(responsive.horizontalPadding, 8, responsive.horizontalPadding, 8),
+              sliver: SliverToBoxAdapter(
+                child: RepaintBoundary(
+                  child: TiketTerbukaSection(
+                    tiketList: state.tiketTerbuka,
+                    isLoading: state.isLoadingTiketTerbuka,
+                    onAmbilTiket: _onAmbilTiket,
+                  ),
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(responsive.horizontalPadding, 8, responsive.horizontalPadding, 8),
+              sliver: SliverToBoxAdapter(
+                child: RepaintBoundary(
+                  child: TiketSayaSection(
+                    tiketList: state.tiketSaya,
+                    isLoading: state.isLoadingTiketSaya,
+                    onTapTiket: _onTapTiket,
+                  ),
+                ),
+              ),
             ),
           ],
-        ),
+
+          // Recent Tickets
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(responsive.horizontalPadding, 8, responsive.horizontalPadding, 16),
+            sliver: SliverToBoxAdapter(
+              child: RepaintBoundary(
+                child: TiketRecentList(
+                  tiketList: stats.tiketTerbaru,
+                  isLoading: state.isRefreshing,
+                  onViewAll: _onLihatSemuaTiket,
+                  onTapTiket: _onTapTiket,
+                ),
+              ),
+            ),
+          ),
+
+          SliverPadding(padding: EdgeInsets.only(bottom: responsive.horizontalPadding)),
+        ],
       ),
     );
   }
+}
+
+// Text style helpers
+class TextStyles {
+  static TextStyle h4(BuildContext context) => TextStyle(
+    fontSize: 22, fontWeight: FontWeight.w600, letterSpacing: -0.3, height: 1.3,
+    color: ShadTheme.of(context).colorScheme.foreground);
+  static TextStyle muted(BuildContext context) => TextStyle(
+    fontSize: 14, fontWeight: FontWeight.w400, letterSpacing: 0, height: 1.4,
+    color: ShadTheme.of(context).colorScheme.mutedForeground);
 }

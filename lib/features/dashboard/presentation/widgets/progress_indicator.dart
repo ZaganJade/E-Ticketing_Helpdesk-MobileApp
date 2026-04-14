@@ -1,13 +1,52 @@
-import 'dart:math' as math show pi, atan2;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import '../../../../core/theme/app_border_radius.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/theme/app_text_styles.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+
+import '../../../../core/theme/shadcn_theme.dart';
 import '../../domain/entities/tiket_status_stats.dart';
 
-/// Animated circular chart segment
+/// Clean donut chart painter
+class _DonutChartPainter extends CustomPainter {
+  final List<_ChartSegment> segments;
+  final double strokeWidth;
+
+  _DonutChartPainter({
+    required this.segments,
+    required this.strokeWidth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+
+    double startAngle = -math.pi / 2;
+    for (final segment in segments) {
+      if (segment.value == 0) continue;
+
+      final sweepAngle = segment.percentage * 2 * math.pi;
+
+      final paint = Paint()
+        ..color = segment.color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..strokeCap = StrokeCap.round;
+
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        startAngle,
+        sweepAngle,
+        false,
+        paint,
+      );
+      startAngle += sweepAngle;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DonutChartPainter oldDelegate) => false;
+}
+
 class _ChartSegment {
   final String label;
   final int value;
@@ -22,87 +61,8 @@ class _ChartSegment {
   });
 }
 
-/// Custom painter for animated donut chart
-class _DonutChartPainter extends CustomPainter {
-  final List<_ChartSegment> segments;
-  final double animationValue;
-  final int? selectedIndex;
-
-  _DonutChartPainter({
-    required this.segments,
-    required this.animationValue,
-    this.selectedIndex,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2;
-    final strokeWidth = 28.0;
-    final innerRadius = radius - strokeWidth;
-
-    double startAngle = -math.pi / 2; // Start from top
-
-    for (int i = 0; i < segments.length; i++) {
-      final segment = segments[i];
-      if (segment.value == 0) continue;
-
-      final sweepAngle = segment.percentage * 2 * math.pi * animationValue;
-      final isSelected = selectedIndex == i;
-
-      // Outer glow for selected segment
-      if (isSelected) {
-        final glowPaint = Paint()
-          ..color = segment.color.withValues(alpha: 0.3)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = strokeWidth + 12
-          ..strokeCap = StrokeCap.round;
-
-        canvas.drawArc(
-          Rect.fromCircle(center: center, radius: radius),
-          startAngle,
-          sweepAngle,
-          false,
-          glowPaint,
-        );
-      }
-
-      // Main segment
-      final paint = Paint()
-        ..color = segment.color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = isSelected ? strokeWidth + 4 : strokeWidth
-        ..strokeCap = StrokeCap.round;
-
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        startAngle,
-        sweepAngle,
-        false,
-        paint,
-      );
-
-      startAngle += sweepAngle;
-    }
-
-    // Inner white/dark circle for donut effect
-    final innerPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.1)
-      ..style = PaintingStyle.fill;
-
-    canvas.drawCircle(center, innerRadius - 4, innerPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _DonutChartPainter oldDelegate) {
-    return oldDelegate.animationValue != animationValue ||
-        oldDelegate.selectedIndex != selectedIndex ||
-        oldDelegate.segments.length != segments.length;
-  }
-}
-
-/// Interactive circular progress chart with animations
-class StatusProgressIndicator extends StatefulWidget {
+/// Status progress indicator with clean donut chart - Fully Responsive
+class StatusProgressIndicator extends StatelessWidget {
   final TiketStatusStats stats;
   final bool isLoading;
 
@@ -112,513 +72,377 @@ class StatusProgressIndicator extends StatefulWidget {
     this.isLoading = false,
   });
 
-  @override
-  State<StatusProgressIndicator> createState() => _StatusProgressIndicatorState();
-}
-
-class _StatusProgressIndicatorState extends State<StatusProgressIndicator>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _chartAnimation;
-  int? _selectedIndex;
-  int _hoveredLegendIndex = -1;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-    _chartAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    );
-    _animationController.forward();
-  }
-
-  @override
-  void didUpdateWidget(StatusProgressIndicator oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.stats != widget.stats && !widget.isLoading) {
-      _animationController.forward(from: 0);
-    }
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
   List<_ChartSegment> get _segments {
-    final total = widget.stats.total;
+    final total = stats.total;
     if (total == 0) return [];
-
     return [
       _ChartSegment(
         label: 'Terbuka',
-        value: widget.stats.terbuka,
-        color: AppColors.statusTerbuka,
-        percentage: widget.stats.terbuka / total,
+        value: stats.terbuka,
+        color: ShadcnTheme.statusOpen,
+        percentage: stats.terbuka / total,
       ),
       _ChartSegment(
         label: 'Diproses',
-        value: widget.stats.diproses,
-        color: AppColors.statusDiproses,
-        percentage: widget.stats.diproses / total,
+        value: stats.diproses,
+        color: ShadcnTheme.statusInProgress,
+        percentage: stats.diproses / total,
       ),
       _ChartSegment(
         label: 'Selesai',
-        value: widget.stats.selesai,
-        color: AppColors.statusSelesai,
-        percentage: widget.stats.selesai / total,
+        value: stats.selesai,
+        color: ShadcnTheme.statusDone,
+        percentage: stats.selesai / total,
       ),
     ];
-  }
-
-  void _onChartTap(TapDownDetails details, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final touchPosition = details.localPosition;
-
-    // Calculate angle
-    final dx = touchPosition.dx - center.dx;
-    final dy = touchPosition.dy - center.dy;
-    var angle = (dx == 0 && dy == 0) ? 0 : (math.atan2(dy, dx) + math.pi / 2);
-    if (angle < 0) angle += 2 * math.pi;
-
-    // Find which segment was tapped
-    double currentAngle = 0;
-    for (int i = 0; i < _segments.length; i++) {
-      final segment = _segments[i];
-      if (segment.value == 0) continue;
-
-      final sweepAngle = segment.percentage * 2 * math.pi;
-      if (angle >= currentAngle && angle < currentAngle + sweepAngle) {
-        setState(() {
-          _selectedIndex = _selectedIndex == i ? null : i;
-        });
-        HapticFeedback.lightImpact();
-        break;
-      }
-      currentAngle += sweepAngle;
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width >= 600;
+    final horizontalPadding = isTablet ? 24.0 : 16.0;
     final segments = _segments;
-    final hasData = widget.stats.total > 0;
+    final hasData = stats.total > 0;
 
-    if (widget.isLoading) {
-      return _buildSkeleton();
-    }
-
-    if (!hasData) {
-      return Container(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isDark
-                ? [
-                    AppColors.darkSurface.withValues(alpha: 0.6),
-                    AppColors.darkSurface.withValues(alpha: 0.3),
-                  ]
-                : [
-                    Colors.white.withValues(alpha: 0.8),
-                    Colors.white.withValues(alpha: 0.4),
-                  ],
-          ),
-          borderRadius: AppBorderRadius.cardRadius,
-          border: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.1)
-                : Colors.white.withValues(alpha: 0.5),
-          ),
-        ),
-        child: Center(
-          child: Column(
-            children: [
-              Icon(
-                Icons.pie_chart_outline_rounded,
-                size: 48,
-                color: AppColors.textMuted.withValues(alpha: 0.5),
-              ),
-              const SizedBox(height: AppSpacing.default_),
-              Text(
-                'Belum ada data tiket',
-                style: AppTextStyles.subtitle.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+    if (isLoading) return _buildSkeleton(context, isDark, isTablet, horizontalPadding);
+    if (!hasData) return _buildEmptyState(context, isDark, isTablet, horizontalPadding);
 
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.default_),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: isDark
-              ? [
-                  AppColors.darkSurface.withValues(alpha: 0.6),
-                  AppColors.darkSurface.withValues(alpha: 0.3),
-                ]
-              : [
-                  Colors.white.withValues(alpha: 0.8),
-                  Colors.white.withValues(alpha: 0.4),
-                ],
-        ),
-        borderRadius: AppBorderRadius.cardRadius,
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.1)
-              : Colors.white.withValues(alpha: 0.5),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.black.withValues(alpha: 0.2)
-                : AppColors.primary.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Distribusi Status',
-                style: AppTextStyles.titleSmall.copyWith(
-                  fontWeight: FontWeight.w600,
+      margin: EdgeInsets.symmetric(horizontal: horizontalPadding),
+      child: ShadCard(
+        padding: EdgeInsets.all(isTablet ? 24 : 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(isTablet ? 12 : 10),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            ShadcnTheme.accent.withValues(alpha: 0.2),
+                            ShadcnTheme.accent.withValues(alpha: 0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.donut_large_rounded,
+                        color: ShadcnTheme.accent,
+                        size: isTablet ? 24 : 20,
+                      ),
+                    ),
+                    SizedBox(width: isTablet ? 16 : 12),
+                    Text(
+                      'Distribusi Status',
+                      style: TextStyle(
+                        fontSize: isTablet ? 18 : 16,
+                        fontWeight: FontWeight.w600,
+                        color: ShadTheme.of(context).colorScheme.foreground,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${widget.stats.total} Total',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w600,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: ShadcnTheme.accent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${stats.total} Total',
+                    style: TextStyle(
+                      fontSize: isTablet ? 14 : 12,
+                      fontWeight: FontWeight.w600,
+                      color: ShadcnTheme.accent,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
+              ],
+            ),
+            SizedBox(height: isTablet ? 24 : 20),
+            // Chart and legend - responsive layout
+            LayoutBuilder(
+              builder: (context, constraints) {
+                // For narrow screens, stack vertically
+                if (constraints.maxWidth < 350) {
+                  return Column(
+                    children: [
+                      _buildChart(context, segments, isTablet, true),
+                      const SizedBox(height: 16),
+                      _buildLegend(context, segments, isDark, isTablet, true),
+                    ],
+                  );
+                }
 
-          // Chart and Legend Row
-          Row(
-            children: [
-              // Interactive Donut Chart
-              Expanded(
-                flex: 2,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final size = Size(
-                      constraints.maxWidth,
-                      constraints.maxWidth.clamp(140, 200),
-                    );
-                    return GestureDetector(
-                      onTapDown: (details) => _onChartTap(details, size),
-                      child: AnimatedBuilder(
-                        animation: _chartAnimation,
-                        builder: (context, child) {
-                          return CustomPaint(
-                            size: size,
-                            painter: _DonutChartPainter(
-                              segments: segments,
-                              animationValue: _chartAnimation.value,
-                              selectedIndex: _selectedIndex,
-                            ),
-                            child: Container(
-                              width: size.width,
-                              height: size.height,
-                              alignment: Alignment.center,
-                              child: _selectedIndex != null
-                                  ? _buildSelectedInfo(segments[_selectedIndex!])
-                                  : _buildTotalInfo(),
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-              const SizedBox(width: AppSpacing.default_),
-
-              // Interactive Legend
-              Expanded(
-                flex: 3,
-                child: Column(
-                  children: segments.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final segment = entry.value;
-                    if (segment.value == 0) return const SizedBox.shrink();
-
-                    final isSelected = _selectedIndex == index;
-                    final isHovered = _hoveredLegendIndex == index;
-
-                    return MouseRegion(
-                      onEnter: (_) {
-                        setState(() => _hoveredLegendIndex = index);
-                      },
-                      onExit: (_) {
-                        setState(() => _hoveredLegendIndex = -1);
-                      },
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedIndex = isSelected ? null : index;
-                          });
-                          HapticFeedback.lightImpact();
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                          padding: const EdgeInsets.all(AppSpacing.sm),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: isSelected || isHovered
-                                  ? [
-                                      segment.color.withValues(alpha: 0.15),
-                                      segment.color.withValues(alpha: 0.05),
-                                    ]
-                                  : [
-                                      Colors.transparent,
-                                      Colors.transparent,
-                                    ],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isSelected || isHovered
-                                  ? segment.color.withValues(alpha: 0.4)
-                                  : Colors.transparent,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                width: isSelected ? 16 : 12,
-                                height: isSelected ? 16 : 12,
-                                decoration: BoxDecoration(
-                                  color: segment.color,
-                                  shape: BoxShape.circle,
-                                  boxShadow: isSelected
-                                      ? [
-                                          BoxShadow(
-                                            color: segment.color.withValues(alpha: 0.4),
-                                            blurRadius: 8,
-                                            spreadRadius: 2,
-                                          ),
-                                        ]
-                                      : null,
-                                ),
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      segment.label,
-                                      style: AppTextStyles.caption.copyWith(
-                                        color: isSelected || isHovered
-                                            ? segment.color
-                                            : AppColors.textSecondary,
-                                        fontWeight: isSelected || isHovered
-                                            ? FontWeight.w600
-                                            : FontWeight.normal,
-                                      ),
-                                    ),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          '${segment.value}',
-                                          style: AppTextStyles.body.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: isSelected || isHovered
-                                                ? segment.color
-                                                : AppColors.textPrimary,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          '(${(segment.percentage * 100).toInt()}%)',
-                                          style: AppTextStyles.caption.copyWith(
-                                            color: AppColors.textMuted,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ],
-          ),
-        ],
+                // For wider screens, row layout
+                return Row(
+                  children: [
+                    _buildChart(context, segments, isTablet, false),
+                    SizedBox(width: isTablet ? 32 : 20),
+                    Expanded(
+                      child: _buildLegend(context, segments, isDark, isTablet, false),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildTotalInfo() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+  Widget _buildChart(BuildContext context, List<_ChartSegment> segments, bool isTablet, bool isVertical) {
+    final chartSize = isTablet ? 160.0 : (isVertical ? 140.0 : 120.0);
+    final strokeWidth = isTablet ? 24.0 : 20.0;
+
+    return Stack(
+      alignment: Alignment.center,
       children: [
-        Text(
-          widget.stats.total.toString(),
-          style: AppTextStyles.headline.copyWith(
-            fontWeight: FontWeight.bold,
-            fontSize: 28,
+        CustomPaint(
+          size: Size(chartSize, chartSize),
+          painter: _DonutChartPainter(
+            segments: segments,
+            strokeWidth: strokeWidth,
           ),
         ),
-        Text(
-          'Total',
-          style: AppTextStyles.caption.copyWith(
-            color: AppColors.textSecondary,
-          ),
+        // Center text
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${stats.total}',
+              style: TextStyle(
+                fontSize: isTablet ? 28 : (isVertical ? 24 : 22),
+                fontWeight: FontWeight.w800,
+                color: ShadTheme.of(context).colorScheme.foreground,
+                letterSpacing: -0.5,
+              ),
+            ),
+            Text(
+              'Total',
+              style: TextStyle(
+                fontSize: isTablet ? 14 : 12,
+                fontWeight: FontWeight.w500,
+                color: ShadTheme.of(context).colorScheme.mutedForeground,
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildSelectedInfo(_ChartSegment segment) {
-    return AnimatedBuilder(
-      animation: _chartAnimation,
-      builder: (context, child) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '${(segment.percentage * 100).toInt()}%',
-              style: AppTextStyles.headline.copyWith(
-                fontWeight: FontWeight.bold,
-                fontSize: 24,
-                color: segment.color,
-              ),
-            ),
-            Text(
-              segment.label,
-              style: AppTextStyles.caption.copyWith(
-                color: segment.color.withValues(alpha: 0.8),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildSkeleton() {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.default_),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppBorderRadius.cardRadius,
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 140,
-            height: 20,
-            decoration: BoxDecoration(
-              color: AppColors.shimmerBase,
-              borderRadius: BorderRadius.circular(4),
+  Widget _buildLegend(BuildContext context, List<_ChartSegment> segments, bool isDark, bool isTablet, bool isVertical) {
+    return Column(
+      children: segments.map((segment) {
+        if (segment.value == 0) return const SizedBox.shrink();
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: EdgeInsets.all(isTablet ? 16 : 12),
+          decoration: BoxDecoration(
+            color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+              width: 1,
             ),
           ),
-          const SizedBox(height: AppSpacing.lg),
-          Row(
+          child: Row(
             children: [
               Container(
-                width: 140,
-                height: 140,
+                width: isTablet ? 14 : 10,
+                height: isTablet ? 14 : 10,
                 decoration: BoxDecoration(
-                  color: AppColors.shimmerBase,
+                  color: segment.color,
                   shape: BoxShape.circle,
                 ),
               ),
-              const SizedBox(width: AppSpacing.default_),
+              SizedBox(width: isTablet ? 14 : 10),
               Expanded(
                 child: Column(
-                  children: List.generate(3, (index) {
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      padding: const EdgeInsets.all(AppSpacing.sm),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      segment.label,
+                      style: TextStyle(
+                        fontSize: isTablet ? 14 : 12,
+                        fontWeight: FontWeight.w500,
+                        color: ShadTheme.of(context).colorScheme.foreground,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          '${segment.value}',
+                          style: TextStyle(
+                            fontSize: isTablet ? 15 : 13,
+                            fontWeight: FontWeight.w700,
+                            color: segment.color,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '(${(segment.percentage * 100).toInt()}%)',
+                          style: TextStyle(
+                            fontSize: isTablet ? 13 : 11,
+                            fontWeight: FontWeight.w400,
+                            color: ShadTheme.of(context).colorScheme.mutedForeground,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, bool isDark, bool isTablet, double horizontalPadding) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: horizontalPadding),
+      child: ShadCard(
+        padding: EdgeInsets.all(isTablet ? 32 : 24),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(
+                Icons.pie_chart_outline_rounded,
+                size: isTablet ? 56 : 48,
+                color: isDark ? ShadcnTheme.darkMutedForeground : ShadcnTheme.mutedForeground,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Belum ada data tiket',
+                style: TextStyle(
+                  fontSize: isTablet ? 16 : 14,
+                  fontWeight: FontWeight.w500,
+                  color: ShadTheme.of(context).colorScheme.foreground,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSkeleton(BuildContext context, bool isDark, bool isTablet, double horizontalPadding) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: horizontalPadding),
+      child: ShadCard(
+        padding: EdgeInsets.all(isTablet ? 24 : 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: isTablet ? 44 : 40,
+                  height: isTablet ? 44 : 40,
+                  decoration: BoxDecoration(
+                    color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  width: isTablet ? 140 : 120,
+                  height: isTablet ? 24 : 20,
+                  decoration: BoxDecoration(
+                    color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  width: isTablet ? 70 : 60,
+                  height: isTablet ? 28 : 24,
+                  decoration: BoxDecoration(
+                    color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: isTablet ? 24 : 20),
+            Row(
+              children: [
+                Container(
+                  width: isTablet ? 160 : 120,
+                  height: isTablet ? 160 : 120,
+                  decoration: BoxDecoration(
+                    color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                SizedBox(width: isTablet ? 32 : 20),
+                Expanded(
+                  child: Column(
+                    children: List.generate(3, (index) => Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: EdgeInsets.all(isTablet ? 16 : 12),
+                      decoration: BoxDecoration(
+                        color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                       child: Row(
                         children: [
                           Container(
-                            width: 12,
-                            height: 12,
+                            width: isTablet ? 14 : 10,
+                            height: isTablet ? 14 : 10,
                             decoration: const BoxDecoration(
-                              color: AppColors.shimmerBase,
                               shape: BoxShape.circle,
                             ),
                           ),
-                          const SizedBox(width: AppSpacing.sm),
+                          SizedBox(width: isTablet ? 14 : 10),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Container(
-                                width: 60,
-                                height: 14,
+                                width: isTablet ? 70 : 50,
+                                height: isTablet ? 16 : 12,
                                 decoration: BoxDecoration(
-                                  color: AppColors.shimmerBase,
-                                  borderRadius: BorderRadius.circular(4),
+                                  color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
+                                  borderRadius: BorderRadius.circular(3),
                                 ),
                               ),
                               const SizedBox(height: 4),
                               Container(
-                                width: 40,
-                                height: 16,
+                                width: isTablet ? 50 : 40,
+                                height: isTablet ? 18 : 14,
                                 decoration: BoxDecoration(
-                                  color: AppColors.shimmerBase,
-                                  borderRadius: BorderRadius.circular(4),
+                                  color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
+                                  borderRadius: BorderRadius.circular(3),
                                 ),
                               ),
                             ],
                           ),
                         ],
                       ),
-                    );
-                  }),
+                    )),
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
-

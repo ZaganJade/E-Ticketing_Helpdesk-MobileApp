@@ -2,20 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import '../../../../core/di/injection.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/theme/app_text_styles.dart';
-import '../../../../shared/widgets/app_button.dart';
-import '../../../../shared/widgets/app_input.dart';
-import '../../../../shared/widgets/app_toast.dart';
+import '../../../../core/theme/shadcn_theme.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../cubit/auth_cubit.dart';
 import '../cubit/login_cubit.dart';
 
 final _logger = Logger();
 
-/// Login page with email/password form
+/// Login page with email/password form - Redesigned with shadcn_ui
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
 
@@ -50,144 +46,202 @@ class _LoginViewState extends State<LoginView> {
   void _onLoginStateChanged(BuildContext context, LoginState state) {
     _logger.i('[LoginPage] State changed: isSuccess=${state.isSuccess}, user=${state.user?.id}');
     if (state.isSuccess && state.user != null) {
-      // Update auth cubit and navigate
       _logger.i('[LoginPage] Login success, calling updateUser and navigating to /dashboard');
       context.read<AuthCubit>().updateUser(state.user!);
       context.go('/dashboard');
     } else if (state.isError && state.errorMessage != null) {
-      // Show error toast
-      AppToast.error(context, state.errorMessage!);
+      _showErrorToast(context, state.errorMessage!);
     }
+  }
+
+  void _showErrorToast(BuildContext context, String message) {
+    ShadToaster.of(context).show(
+      ShadToast.destructive(
+        title: const Text('Login Gagal'),
+        description: Text(message),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width >= 600;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: ShadTheme.of(context).colorScheme.background,
       body: BlocConsumer<LoginCubit, LoginState>(
         listener: _onLoginStateChanged,
         builder: (context, state) {
           return SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+              padding: EdgeInsets.all(isTablet ? 24 : 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: AppSpacing.xxl),
-                  // Logo
+                  SizedBox(height: isTablet ? 48 : 32),
+                  // Logo with gradient
                   Center(
                     child: Container(
-                      width: 80,
-                      height: 80,
+                      width: isTablet ? 100 : 80,
+                      height: isTablet ? 100 : 80,
                       decoration: BoxDecoration(
-                        color: AppColors.primary,
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            ShadcnTheme.accent.withValues(alpha: 0.8),
+                            ShadcnTheme.accent,
+                          ],
+                        ),
                         borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: ShadcnTheme.accent.withValues(alpha: 0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
                       ),
-                      child: const Icon(
-                        Icons.confirmation_number,
-                        size: 40,
-                        color: AppColors.white,
+                      child: Icon(
+                        Icons.confirmation_number_rounded,
+                        size: isTablet ? 48 : 40,
+                        color: Colors.white,
                       ),
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.xl),
+                  SizedBox(height: isTablet ? 32 : 24),
                   // Title
                   Text(
                     'Selamat Datang',
-                    style: AppTextStyles.headline,
+                    style: TextStyle(
+                      fontSize: isTablet ? 28 : 24,
+                      fontWeight: FontWeight.w700,
+                      color: ShadTheme.of(context).colorScheme.foreground,
+                      letterSpacing: -0.5,
+                    ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: AppSpacing.xs),
+                  const SizedBox(height: 8),
                   Text(
                     'Silakan login untuk melanjutkan',
-                    style: AppTextStyles.subtitle,
+                    style: TextStyle(
+                      fontSize: isTablet ? 16 : 14,
+                      fontWeight: FontWeight.w400,
+                      color: ShadTheme.of(context).colorScheme.mutedForeground,
+                    ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: AppSpacing.xxl),
-                  // Email Input
-                  AppInput(
-                    label: 'Email',
-                    hint: 'Masukkan email Anda',
-                    controller: _emailController,
-                    type: AppInputType.email,
-                    isRequired: true,
-                    onChanged: (value) {
-                      context.read<LoginCubit>().emailChanged(value);
-                    },
-                    textInputAction: TextInputAction.next,
-                  ),
-                  if (state.email.isNotEmpty && !state.isEmailValid) ...[
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'Format email tidak valid',
-                      style: AppTextStyles.error,
-                    ),
-                  ],
-                  const SizedBox(height: AppSpacing.lg),
-                  // Password Input
-                  AppPasswordInput(
-                    label: 'Password',
-                    hint: 'Masukkan password Anda',
-                    controller: _passwordController,
-                    isRequired: true,
-                    onChanged: (value) {
-                      context.read<LoginCubit>().passwordChanged(value);
-                    },
-                    enabled: !state.isLoading,
-                  ),
-                  if (state.password.isNotEmpty && !state.isPasswordValid) ...[
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'Password minimal 8 karakter',
-                      style: AppTextStyles.error,
-                    ),
-                  ],
-                  const SizedBox(height: AppSpacing.md),
-                  // Forgot Password Link (optional)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {
-                        // TODO: Implement forgot password
-                        AppToast.info(context, 'Fitur ini akan segera hadir');
-                      },
-                      child: Text(
-                        'Lupa password?',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.primary,
+                  SizedBox(height: isTablet ? 40 : 32),
+
+                  // Login Card
+                  ShadCard(
+                    padding: EdgeInsets.all(isTablet ? 32 : 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Email Input
+                        _buildEmailInput(context, state, isTablet),
+                        if (state.email.isNotEmpty && !state.isEmailValid) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'Format email tidak valid',
+                            style: TextStyle(
+                              fontSize: isTablet ? 13 : 12,
+                              color: ShadcnTheme.statusOpen,
+                            ),
+                          ),
+                        ],
+                        SizedBox(height: isTablet ? 20 : 16),
+
+                        // Password Input
+                        _buildPasswordInput(context, state, isTablet),
+                        if (state.password.isNotEmpty && !state.isPasswordValid) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'Password minimal 8 karakter',
+                            style: TextStyle(
+                              fontSize: isTablet ? 13 : 12,
+                              color: ShadcnTheme.statusOpen,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 8),
+
+                        // Forgot Password Link
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: ShadButton.ghost(
+                            size: ShadButtonSize.sm,
+                            onPressed: () {
+                              ShadToaster.of(context).show(
+                                ShadToast(
+                                  title: const Text('Info'),
+                                  description: const Text('Fitur ini akan segera hadir'),
+                                ),
+                              );
+                            },
+                            child: Text(
+                              'Lupa password?',
+                              style: TextStyle(
+                                fontSize: isTablet ? 14 : 12,
+                                color: ShadcnTheme.accent,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                        SizedBox(height: isTablet ? 24 : 20),
+
+                        // Login Button
+                        ShadButton(
+                          size: isTablet ? ShadButtonSize.lg : null,
+                          backgroundColor: ShadcnTheme.accent,
+                          onPressed: (!state.isFormValid || state.isLoading)
+                              ? null
+                              : () => context.read<LoginCubit>().login(),
+                          child: state.isLoading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : Text(
+                                  'Login',
+                                  style: TextStyle(
+                                    fontSize: isTablet ? 16 : 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.lg),
-                  // Login Button
-                  AppButton(
-                    label: 'Login',
-                    size: AppButtonSize.large,
-                    isLoading: state.isLoading,
-                    isDisabled: !state.isFormValid || state.isLoading,
-                    onPressed: () {
-                      context.read<LoginCubit>().login();
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
+
+                  SizedBox(height: isTablet ? 32 : 24),
                   // Register Link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         'Belum punya akun? ',
-                        style: AppTextStyles.body,
+                        style: TextStyle(
+                          fontSize: isTablet ? 15 : 14,
+                          color: ShadTheme.of(context).colorScheme.mutedForeground,
+                        ),
                       ),
-                      TextButton(
-                        onPressed: () {
-                          context.push('/register');
-                        },
+                      ShadButton.ghost(
+                        size: ShadButtonSize.sm,
+                        onPressed: () => context.push('/register'),
                         child: Text(
                           'Daftar',
-                          style: AppTextStyles.body.copyWith(
-                            color: AppColors.primary,
+                          style: TextStyle(
+                            fontSize: isTablet ? 15 : 14,
                             fontWeight: FontWeight.w600,
+                            color: ShadcnTheme.accent,
                           ),
                         ),
                       ),
@@ -198,6 +252,38 @@ class _LoginViewState extends State<LoginView> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildEmailInput(BuildContext context, LoginState state, bool isTablet) {
+    return ShadInput(
+      placeholder: const Text('Masukkan email Anda'),
+      controller: _emailController,
+      keyboardType: TextInputType.emailAddress,
+      textInputAction: TextInputAction.next,
+      onChanged: (value) => context.read<LoginCubit>().emailChanged(value),
+      enabled: !state.isLoading,
+      leading: Icon(
+        Icons.email_outlined,
+        size: isTablet ? 20 : 18,
+        color: ShadTheme.of(context).colorScheme.mutedForeground,
+      ),
+    );
+  }
+
+  Widget _buildPasswordInput(BuildContext context, LoginState state, bool isTablet) {
+    return ShadInput(
+      placeholder: const Text('Masukkan password Anda'),
+      controller: _passwordController,
+      obscureText: true,
+      textInputAction: TextInputAction.done,
+      onChanged: (value) => context.read<LoginCubit>().passwordChanged(value),
+      enabled: !state.isLoading,
+      leading: Icon(
+        Icons.lock_outline_rounded,
+        size: isTablet ? 20 : 18,
+        color: ShadTheme.of(context).colorScheme.mutedForeground,
       ),
     );
   }

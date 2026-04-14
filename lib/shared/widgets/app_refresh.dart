@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+import '../../core/theme/shadcn_theme.dart';
 
+/// App Refresh Wrapper - Redesigned with shadcn_ui styling
+/// A reusable refresh indicator component following AGENTS.md guidelines
 class AppRefreshWrapper extends StatelessWidget {
   final Widget child;
   final Future<void> Function() onRefresh;
@@ -17,13 +20,11 @@ class AppRefreshWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return RefreshIndicator(
       onRefresh: onRefresh,
       backgroundColor: backgroundColor ??
-          (isDark ? AppColors.darkSurface : AppColors.surface),
-      color: color ?? AppColors.primary,
+          ShadTheme.of(context).colorScheme.card,
+      color: color ?? ShadcnTheme.accent,
       displacement: 40,
       strokeWidth: 3,
       child: child,
@@ -31,6 +32,7 @@ class AppRefreshWrapper extends StatelessWidget {
   }
 }
 
+/// App Pull To Refresh - Simple pull-to-refresh with scroll view
 class AppPullToRefresh extends StatelessWidget {
   final Widget child;
   final Future<void> Function() onRefresh;
@@ -56,6 +58,7 @@ class AppPullToRefresh extends StatelessWidget {
   }
 }
 
+/// App Refresh List View - List view with pull-to-refresh
 class AppRefreshListView<T> extends StatelessWidget {
   final List<T> items;
   final Widget Function(BuildContext, T) itemBuilder;
@@ -84,6 +87,8 @@ class AppRefreshListView<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.width >= 600;
+
     if (items.isEmpty && !isLoading) {
       return AppRefreshWrapper(
         onRefresh: onRefresh,
@@ -93,7 +98,7 @@ class AppRefreshListView<T> extends StatelessWidget {
           children: [
             SizedBox(
               height: MediaQuery.of(context).size.height * 0.6,
-              child: emptyWidget ?? const Center(child: Text('Tidak ada data')),
+              child: emptyWidget ?? _buildDefaultEmptyState(context),
             ),
           ],
         ),
@@ -106,7 +111,8 @@ class AppRefreshListView<T> extends StatelessWidget {
         physics: physics ?? const AlwaysScrollableScrollPhysics(),
         padding: padding,
         itemCount: items.length + (hasMore ? 1 : 0),
-        separatorBuilder: (context, index) => separator ?? const SizedBox.shrink(),
+        separatorBuilder: (context, index) =>
+            separator ?? SizedBox(height: isTablet ? 12 : 8),
         itemBuilder: (context, index) {
           if (index == items.length) {
             return _LoadMoreIndicator(
@@ -116,6 +122,54 @@ class AppRefreshListView<T> extends StatelessWidget {
           }
           return itemBuilder(context, items[index]);
         },
+      ),
+    );
+  }
+
+  Widget _buildDefaultEmptyState(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.width >= 600;
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: EdgeInsets.all(isTablet ? 24 : 20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  ShadcnTheme.muted.withValues(alpha: 0.8),
+                  ShadcnTheme.muted.withValues(alpha: 0.4),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Icon(
+              Icons.inbox_outlined,
+              size: isTablet ? 48 : 40,
+              color: ShadcnTheme.getMutedForeground(context),
+            ),
+          ),
+          SizedBox(height: isTablet ? 20 : 16),
+          Text(
+            'Tidak ada data',
+            style: TextStyle(
+              fontSize: isTablet ? 16 : 14,
+              fontWeight: FontWeight.w500,
+              color: ShadTheme.of(context).colorScheme.foreground,
+            ),
+          ),
+          SizedBox(height: isTablet ? 8 : 6),
+          Text(
+            'Tarik ke bawah untuk menyegarkan',
+            style: TextStyle(
+              fontSize: isTablet ? 14 : 13,
+              color: ShadcnTheme.getMutedForeground(context),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -147,18 +201,96 @@ class _LoadMoreIndicatorState extends State<_LoadMoreIndicator> {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.width >= 600;
+
     return widget.isLoading
         ? Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isTablet ? 20 : 16),
             alignment: Alignment.center,
-            child: const SizedBox(
-              width: 24,
-              height: 24,
+            child: SizedBox(
+              width: isTablet ? 28 : 24,
+              height: isTablet ? 28 : 24,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(ShadcnTheme.accent),
               ),
             ),
           )
         : const SizedBox.shrink();
+  }
+}
+
+/// App Refresh Grid View - Grid view with pull-to-refresh
+class AppRefreshGridView<T> extends StatelessWidget {
+  final List<T> items;
+  final Widget Function(BuildContext, T) itemBuilder;
+  final Future<void> Function() onRefresh;
+  final int crossAxisCount;
+  final double childAspectRatio;
+  final double crossAxisSpacing;
+  final double mainAxisSpacing;
+  final EdgeInsets? padding;
+  final VoidCallback? onLoadMore;
+  final bool hasMore;
+  final bool isLoading;
+  final Widget? emptyWidget;
+
+  const AppRefreshGridView({
+    super.key,
+    required this.items,
+    required this.itemBuilder,
+    required this.onRefresh,
+    this.crossAxisCount = 2,
+    this.childAspectRatio = 1.0,
+    this.crossAxisSpacing = 12,
+    this.mainAxisSpacing = 12,
+    this.padding,
+    this.onLoadMore,
+    this.hasMore = false,
+    this.isLoading = false,
+    this.emptyWidget,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty && !isLoading) {
+      return AppRefreshWrapper(
+        onRefresh: onRefresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: padding,
+          children: [
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.6,
+              child: emptyWidget ?? const Center(child: Text('Tidak ada data')),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return AppRefreshWrapper(
+      onRefresh: onRefresh,
+      child: GridView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: padding,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossAxisCount,
+          childAspectRatio: childAspectRatio,
+          crossAxisSpacing: crossAxisSpacing,
+          mainAxisSpacing: mainAxisSpacing,
+        ),
+        itemCount: items.length + (hasMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == items.length) {
+            return _LoadMoreIndicator(
+              isLoading: isLoading,
+              onLoadMore: onLoadMore,
+            );
+          }
+          return itemBuilder(context, items[index]);
+        },
+      ),
+    );
   }
 }

@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text_styles.dart';
-import 'app_button.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+import '../../core/theme/shadcn_theme.dart';
 
+/// Empty State - Redesigned with shadcn_ui
+/// A reusable component for displaying empty states
 class EmptyState extends StatelessWidget {
   final IconData icon;
   final String title;
   final String? subtitle;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final Color? iconColor;
 
   const EmptyState({
     super.key,
@@ -18,6 +19,7 @@ class EmptyState extends StatelessWidget {
     this.subtitle,
     this.actionLabel,
     this.onAction,
+    this.iconColor,
   });
 
   factory EmptyState.tickets({String? actionLabel, VoidCallback? onAction}) {
@@ -60,48 +62,73 @@ class EmptyState extends StatelessWidget {
     );
   }
 
+  factory EmptyState.attachments({String? actionLabel, VoidCallback? onAction}) {
+    return EmptyState(
+      icon: Icons.attach_file,
+      title: 'Belum ada lampiran',
+      subtitle: 'File yang dilampirkan akan muncul di sini',
+      actionLabel: actionLabel,
+      onAction: onAction,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width >= 600;
+    final color = iconColor ?? ShadcnTheme.accent;
+
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
+        padding: EdgeInsets.all(isTablet ? 40 : 32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+              padding: EdgeInsets.all(isTablet ? 24 : 20),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    color.withValues(alpha: 0.15),
+                    color.withValues(alpha: 0.05),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
                 icon,
-                size: 48,
-                color: AppColors.primary,
+                size: isTablet ? 56 : 48,
+                color: color,
               ),
             ),
-            const SizedBox(height: AppSpacing.lg),
+            SizedBox(height: isTablet ? 24 : 20),
             Text(
               title,
-              style: AppTextStyles.subtitle,
+              style: TextStyle(
+                fontSize: isTablet ? 18 : 16,
+                fontWeight: FontWeight.w600,
+                color: ShadTheme.of(context).colorScheme.foreground,
+              ),
               textAlign: TextAlign.center,
             ),
             if (subtitle != null) ...[
-              const SizedBox(height: AppSpacing.xs),
+              const SizedBox(height: 8),
               Text(
                 subtitle!,
-                style: AppTextStyles.caption.copyWith(
-                  color: AppColors.textSecondary,
+                style: TextStyle(
+                  fontSize: isTablet ? 15 : 14,
+                  color: ShadTheme.of(context).colorScheme.mutedForeground,
                 ),
                 textAlign: TextAlign.center,
               ),
             ],
             if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: AppSpacing.lg),
-              AppButton(
-                label: actionLabel!,
-                variant: AppButtonVariant.outline,
+              SizedBox(height: isTablet ? 24 : 20),
+              ShadButton.outline(
                 onPressed: onAction,
+                child: Text(actionLabel!),
               ),
             ],
           ],

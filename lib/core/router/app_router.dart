@@ -3,11 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/auth/auth.dart';
 import '../../features/dashboard/dashboard.dart';
-import '../../features/splash/splash.dart';
 import '../../features/notifikasi/notifikasi.dart';
 import '../../features/profil/profil.dart';
 import '../../features/tiket/tiket.dart';
 import '../../shared/widgets/app_scaffold.dart';
+import '../../shared/widgets/app_navbar.dart' show NavTab;
 import '../utils/role_utils.dart';
 
 /// App Router Configuration

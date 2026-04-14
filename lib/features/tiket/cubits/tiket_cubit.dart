@@ -1,13 +1,23 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:equatable/equatable.dart';
 import '../models/tiket_model.dart';
 import '../repositories/tiket_repository.dart';
 
 // States
-abstract class TiketState {}
+abstract class TiketState extends Equatable {
+  const TiketState();
 
-class TiketInitial extends TiketState {}
+  @override
+  List<Object?> get props => [];
+}
 
-class TiketLoading extends TiketState {}
+class TiketInitial extends TiketState {
+  const TiketInitial();
+}
+
+class TiketLoading extends TiketState {
+  const TiketLoading();
+}
 
 class TiketListLoaded extends TiketState {
   final List<TiketModel> tiketList;
@@ -15,7 +25,7 @@ class TiketListLoaded extends TiketState {
   final bool hasMore;
   final bool isLoadingMore;
 
-  TiketListLoaded({
+  const TiketListLoaded({
     required this.tiketList,
     this.currentFilter = 'semua',
     this.hasMore = true,
@@ -35,24 +45,41 @@ class TiketListLoaded extends TiketState {
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     );
   }
+
+  @override
+  List<Object?> get props => [
+        tiketList,
+        currentFilter,
+        hasMore,
+        isLoadingMore,
+      ];
 }
 
 class TiketDetailLoaded extends TiketState {
   final TiketModel tiket;
 
-  TiketDetailLoaded({required this.tiket});
+  const TiketDetailLoaded({required this.tiket});
+
+  @override
+  List<Object?> get props => [tiket];
 }
 
 class CreateTiketSuccess extends TiketState {
   final TiketModel tiket;
 
-  CreateTiketSuccess({required this.tiket});
+  const CreateTiketSuccess({required this.tiket});
+
+  @override
+  List<Object?> get props => [tiket];
 }
 
 class TiketError extends TiketState {
   final String message;
 
-  TiketError({required this.message});
+  const TiketError({required this.message});
+
+  @override
+  List<Object?> get props => [message];
 }
 
 // Cubit
@@ -61,7 +88,7 @@ class TiketCubit extends Cubit<TiketState> {
 
   TiketCubit({required TiketRepository tiketRepository})
       : _repository = tiketRepository,
-        super(TiketInitial());
+        super(const TiketInitial());
 
   // Load tiket list
   Future<void> loadTiketList({
@@ -73,7 +100,7 @@ class TiketCubit extends Cubit<TiketState> {
       return;
     }
 
-    emit(TiketLoading());
+    emit(const TiketLoading());
 
     try {
       final tiketList = await _repository.getTiketList(
@@ -126,7 +153,7 @@ class TiketCubit extends Cubit<TiketState> {
 
   // Change filter
   Future<void> changeFilter(String filter, {String? search}) async {
-    emit(TiketLoading());
+    emit(const TiketLoading());
 
     try {
       final tiketList = await _repository.getTiketList(
@@ -149,7 +176,7 @@ class TiketCubit extends Cubit<TiketState> {
 
   // Get tiket detail
   Future<void> getTiketDetail(String tiketId) async {
-    emit(TiketLoading());
+    emit(const TiketLoading());
 
     try {
       final tiket = await _repository.getTiketDetail(tiketId);
@@ -164,7 +191,7 @@ class TiketCubit extends Cubit<TiketState> {
     required String judul,
     required String deskripsi,
   }) async {
-    emit(TiketLoading());
+    emit(const TiketLoading());
 
     try {
       final tiket = await _repository.createTiket(

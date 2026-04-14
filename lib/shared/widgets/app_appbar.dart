@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_text_styles.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+import '../../core/theme/shadcn_theme.dart';
 
+/// App AppBar - Redesigned with shadcn_ui styling
+/// A reusable app bar component following AGENTS.md guidelines
 class AppAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
   final List<Widget>? actions;
@@ -11,6 +13,7 @@ class AppAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Color? backgroundColor;
   final PreferredSizeWidget? bottom;
   final bool automaticallyImplyLeading;
+  final bool showBorder;
 
   const AppAppBar({
     super.key,
@@ -22,25 +25,35 @@ class AppAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.backgroundColor,
     this.bottom,
     this.automaticallyImplyLeading = true,
+    this.showBorder = true,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isTablet = MediaQuery.of(context).size.width >= 600;
 
     return AppBar(
       title: title != null
-          ? Text(title!, style: AppTextStyles.headline)
+          ? Text(
+              title!,
+              style: TextStyle(
+                fontSize: isTablet ? 20 : 18,
+                fontWeight: FontWeight.w600,
+                color: ShadTheme.of(context).colorScheme.foreground,
+              ),
+            )
           : null,
       centerTitle: centerTitle,
       elevation: elevation,
       backgroundColor: backgroundColor ??
-          (isDark ? AppColors.darkBackground : AppColors.background),
-      foregroundColor: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+          (isDark ? ShadcnTheme.darkBackground : ShadcnTheme.background),
+      foregroundColor: ShadTheme.of(context).colorScheme.foreground,
       leading: leading,
       actions: actions,
       bottom: bottom,
       automaticallyImplyLeading: automaticallyImplyLeading,
+      surfaceTintColor: Colors.transparent,
     );
   }
 
@@ -49,6 +62,7 @@ class AppAppBar extends StatelessWidget implements PreferredSizeWidget {
       Size.fromHeight(kToolbarHeight + (bottom?.preferredSize.height ?? 0));
 }
 
+/// App Search AppBar - Search-focused app bar with integrated search field
 class AppSearchAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String hint;
   final TextEditingController? controller;
@@ -76,38 +90,33 @@ class AppSearchAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       elevation: 0,
       backgroundColor: backgroundColor ??
-          (isDark ? AppColors.darkBackground : AppColors.background),
-      foregroundColor: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+          (isDark ? ShadcnTheme.darkBackground : ShadcnTheme.background),
+      foregroundColor: ShadTheme.of(context).colorScheme.foreground,
       leading: onBack != null
-          ? IconButton(
-              icon: const Icon(Icons.arrow_back),
+          ? ShadButton.ghost(
               onPressed: onBack,
+              child: const Icon(Icons.arrow_back),
             )
           : null,
       automaticallyImplyLeading: onBack != null,
-      title: TextField(
+      title: ShadInput(
         controller: controller,
         onChanged: onChanged,
         autofocus: true,
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: AppTextStyles.body.copyWith(
-            color: AppColors.textTertiary,
-          ),
-          border: InputBorder.none,
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: controller != null && controller!.text.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    controller!.clear();
-                    onClear?.call();
-                  },
-                )
-              : null,
-        ),
+        placeholder: Text(hint),
+        leading: const Icon(Icons.search, size: 18),
+        trailing: controller != null && controller!.text.isNotEmpty
+            ? ShadButton.ghost(
+                onPressed: () {
+                  controller!.clear();
+                  onClear?.call();
+                },
+                child: const Icon(Icons.clear, size: 18),
+              )
+            : null,
       ),
       actions: actions,
+      surfaceTintColor: Colors.transparent,
     );
   }
 
@@ -115,12 +124,14 @@ class AppSearchAppBar extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }
 
+/// App Tab AppBar - App bar with integrated tab navigation
 class AppTabAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
-  final List<Tab> tabs;
+  final List<Widget> tabs;
   final List<Widget>? actions;
   final bool showBackButton;
   final Color? backgroundColor;
+  final TabController? tabController;
 
   const AppTabAppBar({
     super.key,
@@ -129,40 +140,86 @@ class AppTabAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.actions,
     this.showBackButton = true,
     this.backgroundColor,
+    this.tabController,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isTablet = MediaQuery.of(context).size.width >= 600;
 
     return AppBar(
-      title: Text(title, style: AppTextStyles.headline),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: isTablet ? 20 : 18,
+          fontWeight: FontWeight.w600,
+          color: ShadTheme.of(context).colorScheme.foreground,
+        ),
+      ),
       centerTitle: true,
       elevation: 0,
       backgroundColor: backgroundColor ??
-          (isDark ? AppColors.darkBackground : AppColors.background),
-      foregroundColor: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+          (isDark ? ShadcnTheme.darkBackground : ShadcnTheme.background),
+      foregroundColor: ShadTheme.of(context).colorScheme.foreground,
       leading: showBackButton
-          ? IconButton(
-              icon: const Icon(Icons.arrow_back),
+          ? ShadButton.ghost(
               onPressed: () => Navigator.of(context).pop(),
+              child: const Icon(Icons.arrow_back),
             )
           : null,
       automaticallyImplyLeading: showBackButton,
       actions: actions,
       bottom: TabBar(
+        controller: tabController,
         tabs: tabs,
-        labelStyle: AppTextStyles.label,
-        unselectedLabelStyle: AppTextStyles.label.copyWith(
-          color: AppColors.textSecondary,
+        labelStyle: TextStyle(
+          fontSize: isTablet ? 14 : 13,
+          fontWeight: FontWeight.w600,
         ),
-        indicatorColor: AppColors.primary,
-        labelColor: AppColors.primary,
-        unselectedLabelColor: AppColors.textSecondary,
+        unselectedLabelStyle: TextStyle(
+          fontSize: isTablet ? 14 : 13,
+          fontWeight: FontWeight.w500,
+        ),
+        indicatorColor: ShadcnTheme.accent,
+        labelColor: ShadcnTheme.accent,
+        unselectedLabelColor: ShadTheme.of(context).colorScheme.mutedForeground,
+        indicatorSize: TabBarIndicatorSize.tab,
       ),
+      surfaceTintColor: Colors.transparent,
     );
   }
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight + 48);
+}
+
+/// App Transparent AppBar - Transparent app bar for hero images
+class AppTransparentAppBar extends StatelessWidget
+    implements PreferredSizeWidget {
+  final List<Widget>? actions;
+  final Widget? leading;
+  final bool automaticallyImplyLeading;
+
+  const AppTransparentAppBar({
+    super.key,
+    this.actions,
+    this.leading,
+    this.automaticallyImplyLeading = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBar(
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      foregroundColor: Colors.white,
+      leading: leading,
+      actions: actions,
+      automaticallyImplyLeading: automaticallyImplyLeading,
+    );
+  }
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }

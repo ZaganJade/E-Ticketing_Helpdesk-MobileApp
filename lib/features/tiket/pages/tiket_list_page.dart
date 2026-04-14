@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/di/injection.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../shared/widgets/widgets.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+import '../../../../core/di/injection.dart';
+import '../../../../core/theme/shadcn_theme.dart';
 import '../cubits/tiket_cubit.dart';
 import '../widgets/tiket_card.dart';
-import '../../../core/theme/app_border_radius.dart';
 
+/// Tiket List Page - Redesigned with shadcn_ui
+/// Displays list of tickets with filtering and search capabilities
 class TiketListPage extends StatefulWidget {
   const TiketListPage({super.key});
 
@@ -80,26 +80,43 @@ class _TiketListPageState extends State<TiketListPage> {
     context.push('/tiket/create').then((created) {
       if (created == true) {
         _cubit.refresh();
-        AppSnackbar.success(context, 'Tiket berhasil dibuat');
+        _showSuccessSnackBar('Tiket berhasil dibuat');
       }
     });
   }
 
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: ShadcnTheme.statusDone,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width >= 600;
 
     return BlocProvider(
       create: (_) => _cubit,
       child: Scaffold(
-        appBar: AppAppBar(
-          title: 'Daftar Tiket',
+        appBar: AppBar(
+          title: Text(
+            'Daftar Tiket',
+            style: TextStyle(
+              fontSize: isTablet ? 20 : 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          centerTitle: true,
           actions: [
-            IconButton(
-              icon: const Icon(Icons.search),
-              onPressed: () {
-                _showSearchBottomSheet();
-              },
+            ShadButton.ghost(
+              size: ShadButtonSize.sm,
+              onPressed: _showSearchDialog,
+              child: const Icon(Icons.search, size: 24),
             ),
           ],
         ),
@@ -110,9 +127,9 @@ class _TiketListPageState extends State<TiketListPage> {
               children: [
                 // Filter chips
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.default_,
-                    vertical: AppSpacing.sm,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isTablet ? 24 : 16,
+                    vertical: isTablet ? 16 : 12,
                   ),
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -121,35 +138,12 @@ class _TiketListPageState extends State<TiketListPage> {
                         final isSelected = state is TiketListLoaded &&
                             state.currentFilter == filter['value'];
                         return Padding(
-                          padding: const EdgeInsets.only(right: AppSpacing.sm),
-                          child: ChoiceChip(
-                            label: Text(filter['label']!),
-                            selected: isSelected,
-                            onSelected: (_) => _onFilterChanged(filter['value']!),
-                            selectedColor: AppColors.primary.withOpacity(0.1),
-                            backgroundColor: isDark
-                                ? AppColors.darkSurface
-                                : AppColors.surface,
-                            labelStyle: TextStyle(
-                              color: isSelected
-                                  ? AppColors.primary
-                                  : (isDark
-                                      ? AppColors.darkTextSecondary
-                                      : AppColors.textSecondary),
-                              fontWeight: isSelected
-                                  ? FontWeight.w600
-                                  : FontWeight.normal,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: AppBorderRadius.badgeRadius,
-                              side: BorderSide(
-                                color: isSelected
-                                    ? AppColors.primary
-                                    : (isDark
-                                        ? AppColors.darkBorder
-                                        : AppColors.border),
-                              ),
-                            ),
+                          padding: const EdgeInsets.only(right: 8),
+                          child: _buildFilterChip(
+                            label: filter['label']!,
+                            isSelected: isSelected,
+                            onTap: () => _onFilterChanged(filter['value']!),
+                            isTablet: isTablet,
                           ),
                         );
                       }).toList(),
@@ -159,50 +153,108 @@ class _TiketListPageState extends State<TiketListPage> {
 
                 // Content
                 Expanded(
-                  child: _buildContent(state),
+                  child: _buildContent(state, isTablet),
                 ),
               ],
             );
           },
         ),
+        floatingActionButton: ShadButton(
+          onPressed: _navigateToCreate,
+          child: const Icon(Icons.add, size: 24),
+        ),
       ),
     );
   }
 
-  Widget _buildContent(TiketState state) {
+  Widget _buildFilterChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required bool isTablet,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: isTablet ? 16 : 12,
+          vertical: isTablet ? 10 : 8,
+        ),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    ShadcnTheme.accent.withValues(alpha: 0.2),
+                    ShadcnTheme.accent.withValues(alpha: 0.1),
+                  ],
+                )
+              : null,
+          color: isSelected
+              ? null
+              : (isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? ShadcnTheme.accent
+                : (isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: isTablet ? 14 : 13,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            color: isSelected
+                ? ShadcnTheme.accent
+                : ShadTheme.of(context).colorScheme.mutedForeground,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(TiketState state, bool isTablet) {
+    final horizontalPadding = isTablet ? 24.0 : 16.0;
+
     if (state is TiketLoading) {
-      return const ListSkeleton(itemCount: 5);
+      return ListView.builder(
+        padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+        itemCount: 5,
+        itemBuilder: (context, index) => const TiketCardSkeleton(),
+      );
     }
 
     if (state is TiketError) {
-      return ErrorState.server(
-        onRetry: () => _cubit.refresh(),
-      );
+      return _buildErrorState(isTablet, horizontalPadding);
     }
 
     if (state is TiketListLoaded) {
       if (state.tiketList.isEmpty) {
-        return EmptyState.tickets(
-          actionLabel: 'Buat Tiket',
-          onAction: _navigateToCreate,
-        );
+        return _buildEmptyState(isTablet, horizontalPadding);
       }
 
-      return AppRefreshWrapper(
-        onRefresh: () => _cubit.refresh(search: _currentSearch.isEmpty ? null : _currentSearch),
-        child: ListView.separated(
+      return RefreshIndicator(
+        onRefresh: () async {
+          await _cubit.refresh(search: _currentSearch.isEmpty ? null : _currentSearch);
+        },
+        child: ListView.builder(
           controller: _scrollController,
-          padding: const EdgeInsets.all(AppSpacing.default_),
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
           itemCount: state.tiketList.length + (state.hasMore ? 1 : 0),
-          separatorBuilder: (_, __) =>
-              const SizedBox(height: AppSpacing.default_),
           itemBuilder: (context, index) {
             if (index == state.tiketList.length) {
               return state.isLoadingMore
-                  ? const Center(
+                  ? Center(
                       child: Padding(
-                        padding: EdgeInsets.all(AppSpacing.default_),
-                        child: CircularProgressIndicator(),
+                        padding: EdgeInsets.all(isTablet ? 24 : 16),
+                        child: const CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(ShadcnTheme.accent),
+                        ),
                       ),
                     )
                   : const SizedBox.shrink();
@@ -221,55 +273,178 @@ class _TiketListPageState extends State<TiketListPage> {
     return const SizedBox.shrink();
   }
 
-  void _showSearchBottomSheet() {
-    AppModal.showBottomSheet(
-      context: context,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _searchController,
-            autofocus: true,
-            decoration: InputDecoration(
-              hintText: 'Cari judul atau deskripsi...',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                      },
-                    )
-                  : null,
+  Widget _buildEmptyState(bool isTablet, double horizontalPadding) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Center(
+      child: Container(
+        margin: EdgeInsets.all(horizontalPadding),
+        padding: EdgeInsets.all(isTablet ? 40 : 32),
+        decoration: BoxDecoration(
+          color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+            width: 1,
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: EdgeInsets.all(isTablet ? 24 : 20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    ShadcnTheme.accent.withValues(alpha: 0.15),
+                    ShadcnTheme.accent.withValues(alpha: 0.05),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(
+                Icons.confirmation_number_outlined,
+                size: isTablet ? 56 : 48,
+                color: ShadcnTheme.accent,
+              ),
             ),
-            onSubmitted: (_) {
+            const SizedBox(height: 16),
+            Text(
+              'Belum ada tiket',
+              style: TextStyle(
+                fontSize: isTablet ? 18 : 16,
+                fontWeight: FontWeight.w600,
+                color: ShadTheme.of(context).colorScheme.foreground,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Buat tiket baru untuk memulai',
+              style: TextStyle(
+                fontSize: isTablet ? 15 : 14,
+                color: ShadTheme.of(context).colorScheme.mutedForeground,
+              ),
+            ),
+            SizedBox(height: isTablet ? 24 : 20),
+            ShadButton(
+              onPressed: _navigateToCreate,
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.add, size: 18),
+                  SizedBox(width: 8),
+                  Text('Buat Tiket'),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(bool isTablet, double horizontalPadding) {
+    return Center(
+      child: Container(
+        margin: EdgeInsets.all(horizontalPadding),
+        padding: EdgeInsets.all(isTablet ? 40 : 32),
+        decoration: BoxDecoration(
+          color: ShadcnTheme.destructive.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: ShadcnTheme.destructive.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: isTablet ? 56 : 48,
+              color: ShadcnTheme.destructive,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Gagal memuat tiket',
+              style: TextStyle(
+                fontSize: isTablet ? 18 : 16,
+                fontWeight: FontWeight.w600,
+                color: ShadcnTheme.destructive,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Terjadi kesalahan saat memuat data',
+              style: TextStyle(
+                fontSize: isTablet ? 14 : 13,
+                color: ShadTheme.of(context).colorScheme.mutedForeground,
+              ),
+            ),
+            SizedBox(height: isTablet ? 24 : 20),
+            ShadButton.outline(
+              onPressed: () => _cubit.refresh(),
+              child: const Text('Coba Lagi'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSearchDialog() {
+    showShadDialog(
+      context: context,
+      builder: (context) => ShadDialog(
+        title: const Text('Cari Tiket'),
+        description: const Text('Cari berdasarkan judul atau deskripsi'),
+        actions: [
+          ShadButton.outline(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ShadButton(
+            onPressed: () {
               Navigator.pop(context);
               _onSearchSubmitted();
             },
-          ),
-          const SizedBox(height: AppSpacing.default_),
-          Row(
-            children: [
-              Expanded(
-                child: AppButton(
-                  label: 'Batal',
-                  variant: AppButtonVariant.ghost,
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.default_),
-              Expanded(
-                child: AppButton(
-                  label: 'Cari',
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _onSearchSubmitted();
-                  },
-                ),
-              ),
-            ],
+            child: const Text('Cari'),
           ),
         ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ShadInput(
+              controller: _searchController,
+              placeholder: const Text('Ketik kata kunci...'),
+              autofocus: true,
+              onSubmitted: (_) {
+                Navigator.pop(context);
+                _onSearchSubmitted();
+              },
+            ),
+            if (_searchController.text.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: ShadButton.ghost(
+                  size: ShadButtonSize.sm,
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() {});
+                  },
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.clear, size: 16),
+                      SizedBox(width: 4),
+                      Text('Bersihkan'),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

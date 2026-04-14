@@ -12,6 +12,7 @@ import '../../features/komentar/komentar.dart';
 import '../../features/tiket/tiket.dart';
 import '../services/api_service.dart';
 import '../services/supabase_service.dart';
+import '../theme/theme_cubit.dart';
 
 // Global service locator
 final GetIt getIt = GetIt.instance;
@@ -68,6 +69,11 @@ Future<void> initDependencies() async {
   // Cubits
   getIt.registerFactory<AuthCubit>(
     () => AuthCubit(authRepository: getIt()),
+  );
+
+  // Theme Cubit - singleton to persist across the app
+  getIt.registerLazySingleton<ThemeCubit>(
+    () => ThemeCubit(),
   );
 
   getIt.registerFactory<LoginCubit>(

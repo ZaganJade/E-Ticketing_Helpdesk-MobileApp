@@ -12,7 +12,7 @@ export 'cubits/lampiran_cubit.dart';
 // Widgets
 export 'widgets/lampiran_upload.dart';
 export 'widgets/lampiran_list.dart';
-export 'widgets/lampiran_preview.dart';
+export 'widgets/lampiran_preview.dart'; // Includes LampiranPreview and LampiranFilePreview
 
 // Utils
 export 'utils/image_compressor.dart';

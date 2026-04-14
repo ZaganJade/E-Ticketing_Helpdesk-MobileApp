@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_border_radius.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text_styles.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+import '../../core/theme/shadcn_theme.dart';
 
+/// App Dropdown - Redesigned with shadcn_ui ShadSelect
+/// A reusable dropdown component following AGENTS.md guidelines
 class AppDropdown<T> extends StatelessWidget {
   final String? label;
   final String? hint;
   final T? value;
-  final List<DropdownMenuItem<T>> items;
+  final List<ShadOption<T>> options;
   final ValueChanged<T?>? onChanged;
   final bool isRequired;
   final bool enabled;
@@ -19,7 +19,7 @@ class AppDropdown<T> extends StatelessWidget {
     this.label,
     this.hint,
     this.value,
-    required this.items,
+    required this.options,
     this.onChanged,
     this.isRequired = false,
     this.enabled = true,
@@ -28,7 +28,7 @@ class AppDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isTablet = MediaQuery.of(context).size.width >= 600;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -37,49 +37,41 @@ class AppDropdown<T> extends StatelessWidget {
         if (label != null) ...[
           Text(
             isRequired ? '$label *' : label!,
-            style: AppTextStyles.label,
+            style: TextStyle(
+              fontSize: isTablet ? 14 : 13,
+              fontWeight: FontWeight.w500,
+              color: ShadTheme.of(context).colorScheme.foreground,
+            ),
           ),
-          const SizedBox(height: AppSpacing.xs),
+          SizedBox(height: isTablet ? 8 : 6),
         ],
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-          ),
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.darkSurface : AppColors.surface,
-            borderRadius: AppBorderRadius.buttonRadius,
-            border: Border.all(
-              color: errorText != null
-                  ? AppColors.error
-                  : (isDark ? AppColors.darkBorder : AppColors.border),
+        ShadSelect<T>(
+          enabled: enabled,
+          placeholder: Text(
+            hint ?? 'Pilih...',
+            style: TextStyle(
+              fontSize: isTablet ? 15 : 14,
+              color: ShadTheme.of(context).colorScheme.mutedForeground,
             ),
           ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<T>(
-              value: value,
-              hint: hint != null
-                  ? Text(
-                      hint!,
-                      style: AppTextStyles.body.copyWith(
-                        color: AppColors.textTertiary,
-                      ),
-                    )
-                  : null,
-              isExpanded: true,
-              icon: const Icon(Icons.arrow_drop_down),
-              items: items,
-              onChanged: enabled ? onChanged : null,
-              style: AppTextStyles.body,
-              dropdownColor: isDark ? AppColors.darkSurface : AppColors.surface,
-            ),
-          ),
+          initialValue: value,
+          onChanged: onChanged,
+          options: options,
+          selectedOptionBuilder: (context, value) {
+            final option = options.firstWhere(
+              (opt) => opt.value == value,
+              orElse: () => ShadOption(value: value, child: Text(value.toString())),
+            );
+            return option.child;
+          },
         ),
         if (errorText != null) ...[
-          const SizedBox(height: AppSpacing.xs),
+          SizedBox(height: isTablet ? 8 : 6),
           Text(
             errorText!,
-            style: AppTextStyles.caption.copyWith(
-              color: AppColors.error,
+            style: TextStyle(
+              fontSize: isTablet ? 12 : 11,
+              color: ShadcnTheme.destructive,
             ),
           ),
         ],
@@ -88,6 +80,7 @@ class AppDropdown<T> extends StatelessWidget {
   }
 }
 
+/// App Status Dropdown - Pre-configured dropdown for ticket status
 class AppStatusDropdown extends StatelessWidget {
   final String? label;
   final String? value;
@@ -106,10 +99,27 @@ class AppStatusDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.width >= 600;
+
     final statusOptions = [
-      ('TERBUKA', 'Terbuka', AppColors.statusTerbuka, Icons.access_time),
-      ('DIPROSES', 'Diproses', AppColors.statusDiproses, Icons.sync),
-      ('SELESAI', 'Selesai', AppColors.statusSelesai, Icons.check_circle),
+      (
+        'TERBUKA',
+        'Terbuka',
+        ShadcnTheme.statusOpen,
+        Icons.radio_button_unchecked_rounded
+      ),
+      (
+        'DIPROSES',
+        'Diproses',
+        ShadcnTheme.statusInProgress,
+        Icons.sync_rounded
+      ),
+      (
+        'SELESAI',
+        'Selesai',
+        ShadcnTheme.statusDone,
+        Icons.check_circle_rounded
+      ),
     ];
 
     return AppDropdown<String>(
@@ -118,17 +128,21 @@ class AppStatusDropdown extends StatelessWidget {
       value: value,
       isRequired: isRequired,
       enabled: enabled,
-      items: statusOptions.map((option) {
+      options: statusOptions.map((option) {
         final (statusValue, label, color, icon) = option;
-        return DropdownMenuItem(
+        return ShadOption(
           value: statusValue,
           child: Row(
             children: [
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: AppSpacing.sm),
+              Icon(icon, size: isTablet ? 18 : 16, color: color),
+              SizedBox(width: isTablet ? 12 : 8),
               Text(
                 label,
-                style: AppTextStyles.body.copyWith(color: color),
+                style: TextStyle(
+                  fontSize: isTablet ? 14 : 13,
+                  fontWeight: FontWeight.w500,
+                  color: color,
+                ),
               ),
             ],
           ),
@@ -139,6 +153,7 @@ class AppStatusDropdown extends StatelessWidget {
   }
 }
 
+/// App Role Dropdown - Pre-configured dropdown for user roles
 class AppRoleDropdown extends StatelessWidget {
   final String? label;
   final String? value;
@@ -157,6 +172,8 @@ class AppRoleDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.width >= 600;
+
     final roleOptions = [
       ('pengguna', 'Pengguna', Icons.person),
       ('helpdesk', 'Helpdesk', Icons.support_agent),
@@ -169,15 +186,83 @@ class AppRoleDropdown extends StatelessWidget {
       value: value,
       isRequired: isRequired,
       enabled: enabled,
-      items: roleOptions.map((option) {
+      options: roleOptions.map((option) {
         final (roleValue, label, icon) = option;
-        return DropdownMenuItem(
+        return ShadOption(
           value: roleValue,
           child: Row(
             children: [
-              Icon(icon, size: 16, color: AppColors.textSecondary),
-              const SizedBox(width: AppSpacing.sm),
-              Text(label, style: AppTextStyles.body),
+              Icon(
+                icon,
+                size: isTablet ? 18 : 16,
+                color: ShadcnTheme.getMutedForeground(context),
+              ),
+              SizedBox(width: isTablet ? 12 : 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: isTablet ? 14 : 13,
+                  color: ShadTheme.of(context).colorScheme.foreground,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+      onChanged: onChanged,
+    );
+  }
+}
+
+/// App Priority Dropdown - Pre-configured dropdown for ticket priority
+class AppPriorityDropdown extends StatelessWidget {
+  final String? label;
+  final String? value;
+  final ValueChanged<String?>? onChanged;
+  final bool isRequired;
+  final bool enabled;
+
+  const AppPriorityDropdown({
+    super.key,
+    this.label,
+    this.value,
+    this.onChanged,
+    this.isRequired = false,
+    this.enabled = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.width >= 600;
+
+    final priorityOptions = [
+      ('rendah', 'Rendah', ShadcnTheme.statusDone, Icons.arrow_downward_rounded),
+      ('sedang', 'Sedang', ShadcnTheme.statusInProgress, Icons.remove_rounded),
+      ('tinggi', 'Tinggi', ShadcnTheme.statusOpen, Icons.arrow_upward_rounded),
+    ];
+
+    return AppDropdown<String>(
+      label: label ?? 'Prioritas',
+      hint: 'Pilih prioritas',
+      value: value,
+      isRequired: isRequired,
+      enabled: enabled,
+      options: priorityOptions.map((option) {
+        final (priorityValue, label, color, icon) = option;
+        return ShadOption(
+          value: priorityValue,
+          child: Row(
+            children: [
+              Icon(icon, size: isTablet ? 18 : 16, color: color),
+              SizedBox(width: isTablet ? 12 : 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: isTablet ? 14 : 13,
+                  fontWeight: FontWeight.w500,
+                  color: color,
+                ),
+              ),
             ],
           ),
         );

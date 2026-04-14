@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/theme/app_border_radius.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text_styles.dart';
-import '../../../shared/widgets/widgets.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+import '../../../core/theme/shadcn_theme.dart';
 import '../cubits/notifikasi_cubit.dart';
 import '../models/notifikasi_model.dart';
 import '../widgets/notifikasi_card.dart';
@@ -65,11 +62,28 @@ class _NotifikasiListPageState extends State<NotifikasiListPage>
   }
 
   void _onMarkAllAsRead() {
-    AppModal.showConfirmation(
+    showShadDialog<bool>(
       context: context,
-      title: 'Tandai Semua Dibaca',
-      message: 'Apakah Anda yakin ingin menandai semua notifikasi sebagai sudah dibaca?',
-      confirmText: 'Ya, Tandai',
+      builder: (context) => ShadDialog.alert(
+        title: const Text('Tandai Semua Dibaca'),
+        description: const Text(
+          'Apakah Anda yakin ingin menandai semua notifikasi sebagai sudah dibaca?',
+        ),
+        actions: [
+          ShadButton.outline(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Batal'),
+          ),
+          ShadButton(
+            backgroundColor: ShadcnTheme.accent,
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text(
+              'Ya, Tandai',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
     ).then((confirmed) {
       if (confirmed == true) {
         _cubit.markAllAsRead();
@@ -79,11 +93,57 @@ class _NotifikasiListPageState extends State<NotifikasiListPage>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width >= 600;
+
     return BlocProvider(
       create: (_) => _cubit,
       child: Scaffold(
-        appBar: AppAppBar(
-          title: 'Notifikasi',
+        backgroundColor: ShadTheme.of(context).colorScheme.background,
+        appBar: AppBar(
+          backgroundColor: ShadTheme.of(context).colorScheme.background,
+          elevation: 0,
+          leading: IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: Icon(
+              Icons.arrow_back_rounded,
+              color: ShadTheme.of(context).colorScheme.foreground,
+            ),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(isTablet ? 10 : 8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      ShadcnTheme.accent.withValues(alpha: 0.2),
+                      ShadcnTheme.accent.withValues(alpha: 0.1),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.notifications_rounded,
+                  color: ShadcnTheme.accent,
+                  size: isTablet ? 22 : 20,
+                ),
+              ),
+              SizedBox(width: isTablet ? 14 : 12),
+              Text(
+                'Notifikasi',
+                style: TextStyle(
+                  fontSize: isTablet ? 20 : 18,
+                  fontWeight: FontWeight.w600,
+                  color: ShadTheme.of(context).colorScheme.foreground,
+                  letterSpacing: -0.3,
+                ),
+              ),
+            ],
+          ),
           actions: [
             BlocBuilder<NotifikasiCubit, NotifikasiState>(
               bloc: _cubit,
@@ -93,12 +153,26 @@ class _NotifikasiListPageState extends State<NotifikasiListPage>
 
                 if (!hasUnread) return const SizedBox.shrink();
 
-                return TextButton.icon(
+                return ShadButton.ghost(
+                  size: ShadButtonSize.sm,
                   onPressed: _onMarkAllAsRead,
-                  icon: const Icon(Icons.done_all, size: 18),
-                  label: const Text('Tandai Semua'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primary,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.done_all_rounded,
+                        size: isTablet ? 18 : 16,
+                        color: ShadcnTheme.accent,
+                      ),
+                      SizedBox(width: isTablet ? 6 : 4),
+                      Text(
+                        isTablet ? 'Tandai Semua' : 'Semua',
+                        style: TextStyle(
+                          fontSize: isTablet ? 14 : 12,
+                          color: ShadcnTheme.accent,
+                        ),
+                      ),
+                    ],
                   ),
                 );
               },
@@ -112,9 +186,9 @@ class _NotifikasiListPageState extends State<NotifikasiListPage>
               children: [
                 // Filter tabs
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.default_,
-                    vertical: AppSpacing.sm,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isTablet ? 24 : 16,
+                    vertical: isTablet ? 12 : 8,
                   ),
                   child: Row(
                     children: [
@@ -123,8 +197,9 @@ class _NotifikasiListPageState extends State<NotifikasiListPage>
                         isSelected: state is! NotifikasiListLoaded ||
                             !state.showUnreadOnly,
                         onTap: () => _cubit.toggleFilter(false),
+                        isTablet: isTablet,
                       ),
-                      const SizedBox(width: AppSpacing.sm),
+                      SizedBox(width: isTablet ? 12 : 8),
                       _FilterChip(
                         label: 'Belum Dibaca',
                         isSelected: state is NotifikasiListLoaded &&
@@ -133,6 +208,7 @@ class _NotifikasiListPageState extends State<NotifikasiListPage>
                             ? state.unreadCount
                             : null,
                         onTap: () => _cubit.toggleFilter(true),
+                        isTablet: isTablet,
                       ),
                     ],
                   ),
@@ -140,7 +216,7 @@ class _NotifikasiListPageState extends State<NotifikasiListPage>
 
                 // Content
                 Expanded(
-                  child: _buildContent(state),
+                  child: _buildContent(state, isDark, isTablet),
                 ),
               ],
             );
@@ -150,15 +226,14 @@ class _NotifikasiListPageState extends State<NotifikasiListPage>
     );
   }
 
-  Widget _buildContent(NotifikasiState state) {
-    if (state is NotifikasiLoading) {
-      return const ListSkeleton(itemCount: 5);
+  Widget _buildContent(NotifikasiState state, bool isDark, bool isTablet) {
+    // Show loading for initial state or explicit loading state
+    if (state is NotifikasiLoading || state is NotifikasiInitial) {
+      return _buildLoadingList(isDark, isTablet);
     }
 
     if (state is NotifikasiError) {
-      return ErrorState.server(
-        onRetry: () => _cubit.refresh(),
-      );
+      return _buildErrorState(state.message, isTablet);
     }
 
     // Show refreshing animation with current data
@@ -168,7 +243,8 @@ class _NotifikasiListPageState extends State<NotifikasiListPage>
           // Show current list dimmed
           Opacity(
             opacity: 0.5,
-            child: _buildNotifikasiList(state.currentList, false, false),
+            child: _buildNotifikasiList(
+              state.currentList, false, false, isTablet),
           ),
           // Show animated loading indicator at top
           Positioned(
@@ -176,13 +252,15 @@ class _NotifikasiListPageState extends State<NotifikasiListPage>
             left: 0,
             right: 0,
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.default_),
+              padding: EdgeInsets.symmetric(
+                vertical: isTablet ? 16 : 12,
+              ),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    AppColors.primary.withOpacity(0.1),
+                    ShadcnTheme.accent.withValues(alpha: 0.1),
                     Colors.transparent,
                   ],
                 ),
@@ -194,26 +272,28 @@ class _NotifikasiListPageState extends State<NotifikasiListPage>
                     children: [
                       RotationTransition(
                         turns: _refreshAnimationController,
-                        child: const Icon(
-                          Icons.sync,
-                          color: AppColors.primary,
-                          size: 20,
+                        child: Icon(
+                          Icons.sync_rounded,
+                          color: ShadcnTheme.accent,
+                          size: isTablet ? 22 : 20,
                         ),
                       ),
-                      const SizedBox(width: AppSpacing.sm),
+                      SizedBox(width: isTablet ? 10 : 8),
                       Text(
                         'Memperbarui data...',
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.primary,
+                        style: TextStyle(
+                          fontSize: isTablet ? 14 : 13,
+                          color: ShadcnTheme.accent,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.sm),
+                  SizedBox(height: isTablet ? 12 : 8),
                   LinearProgressIndicator(
-                    backgroundColor: AppColors.primary.withOpacity(0.1),
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      AppColors.primary,
+                    backgroundColor: ShadcnTheme.accent.withValues(alpha: 0.1),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      ShadcnTheme.accent,
                     ),
                   ),
                 ],
@@ -230,13 +310,12 @@ class _NotifikasiListPageState extends State<NotifikasiListPage>
         _refreshAnimationController
           ..reset()
           ..forward().then((_) {
-            // Reset hasNewData after animation via cubit method
             _cubit.resetHasNewData();
           });
       }
 
       if (state.notifikasiList.isEmpty) {
-        return EmptyState.notifications();
+        return _buildEmptyState(isDark, isTablet);
       }
 
       return AnimatedSwitcher(
@@ -245,6 +324,7 @@ class _NotifikasiListPageState extends State<NotifikasiListPage>
           state.notifikasiList,
           state.hasMore,
           state.isLoadingMore,
+          isTablet,
         ),
       );
     }
@@ -252,26 +332,214 @@ class _NotifikasiListPageState extends State<NotifikasiListPage>
     return const SizedBox.shrink();
   }
 
+  Widget _buildLoadingList(bool isDark, bool isTablet) {
+    return ListView.separated(
+      padding: EdgeInsets.all(isTablet ? 24 : 16),
+      itemCount: 5,
+      separatorBuilder: (_, __) => SizedBox(height: isTablet ? 16 : 12),
+      itemBuilder: (context, index) {
+        return Container(
+          padding: EdgeInsets.all(isTablet ? 16 : 12),
+          decoration: BoxDecoration(
+            color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Icon skeleton
+              Container(
+                width: isTablet ? 44 : 40,
+                height: isTablet ? 44 : 40,
+                decoration: BoxDecoration(
+                  color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              SizedBox(width: isTablet ? 16 : 12),
+              // Content skeleton
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 140,
+                      height: isTablet ? 16 : 14,
+                      decoration: BoxDecoration(
+                        color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    SizedBox(height: isTablet ? 10 : 8),
+                    Container(
+                      width: double.infinity,
+                      height: isTablet ? 50 : 40,
+                      decoration: BoxDecoration(
+                        color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildErrorState(String message, bool isTablet) {
+    return Center(
+      child: Container(
+        margin: EdgeInsets.all(isTablet ? 24 : 16),
+        padding: EdgeInsets.all(isTablet ? 32 : 24),
+        decoration: BoxDecoration(
+          color: ShadcnTheme.statusOpen.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: ShadcnTheme.statusOpen.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.error_outline_rounded,
+              size: isTablet ? 56 : 48,
+              color: ShadcnTheme.statusOpen,
+            ),
+            SizedBox(height: isTablet ? 16 : 12),
+            Text(
+              'Gagal memuat notifikasi',
+              style: TextStyle(
+                fontSize: isTablet ? 18 : 16,
+                fontWeight: FontWeight.w600,
+                color: ShadTheme.of(context).colorScheme.foreground,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: TextStyle(
+                fontSize: isTablet ? 15 : 14,
+                color: ShadTheme.of(context).colorScheme.mutedForeground,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: isTablet ? 24 : 20),
+            ShadButton(
+              backgroundColor: ShadcnTheme.accent,
+              onPressed: () => _cubit.refresh(),
+              child: Text(
+                'Coba Lagi',
+                style: TextStyle(
+                  fontSize: isTablet ? 15 : 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(bool isDark, bool isTablet) {
+    return Center(
+      child: Container(
+        margin: EdgeInsets.all(isTablet ? 24 : 16),
+        padding: EdgeInsets.all(isTablet ? 40 : 32),
+        decoration: BoxDecoration(
+          color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.notifications_none_rounded,
+              size: isTablet ? 56 : 48,
+              color: isDark
+                  ? ShadcnTheme.darkMutedForeground
+                  : ShadcnTheme.mutedForeground,
+            ),
+            SizedBox(height: isTablet ? 16 : 12),
+            Text(
+              'Belum ada notifikasi',
+              style: TextStyle(
+                fontSize: isTablet ? 18 : 16,
+                fontWeight: FontWeight.w600,
+                color: ShadTheme.of(context).colorScheme.foreground,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Notifikasi akan muncul di sini',
+              style: TextStyle(
+                fontSize: isTablet ? 15 : 14,
+                color: ShadTheme.of(context).colorScheme.mutedForeground,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: isTablet ? 24 : 20),
+            ShadButton.outline(
+              onPressed: () => _cubit.refresh(),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.refresh_rounded,
+                    size: isTablet ? 18 : 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Refresh',
+                    style: TextStyle(
+                      fontSize: isTablet ? 15 : 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildNotifikasiList(
     List<NotifikasiModel> notifikasiList,
     bool hasMore,
     bool isLoadingMore,
+    bool isTablet,
   ) {
-    return AppRefreshWrapper(
+    return RefreshIndicator(
       onRefresh: () => _cubit.refresh(),
+      color: ShadcnTheme.accent,
       child: ListView.separated(
         controller: _scrollController,
-        padding: const EdgeInsets.all(AppSpacing.default_),
+        padding: EdgeInsets.all(isTablet ? 24 : 16),
         itemCount: notifikasiList.length + (hasMore ? 1 : 0),
-        separatorBuilder: (_, __) =>
-            const SizedBox(height: AppSpacing.default_),
+        separatorBuilder: (_, __) => SizedBox(height: isTablet ? 12 : 8),
         itemBuilder: (context, index) {
           if (index == notifikasiList.length) {
             return isLoadingMore
-                ? const Center(
+                ? Center(
                     child: Padding(
-                      padding: EdgeInsets.all(AppSpacing.default_),
-                      child: CircularProgressIndicator(),
+                      padding: EdgeInsets.all(isTablet ? 16 : 12),
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          ShadcnTheme.accent,
+                        ),
+                      ),
                     ),
                   )
                 : const SizedBox.shrink();
@@ -284,7 +552,6 @@ class _NotifikasiListPageState extends State<NotifikasiListPage>
               notifikasi.id,
               notifikasi.referensiId,
             ),
-            onDismiss: () => _cubit.markAsRead(notifikasi.id),
           );
         },
       ),
@@ -297,12 +564,14 @@ class _FilterChip extends StatelessWidget {
   final bool isSelected;
   final int? count;
   final VoidCallback onTap;
+  final bool isTablet;
 
   const _FilterChip({
     required this.label,
     required this.isSelected,
     this.count,
     required this.onTap,
+    required this.isTablet,
   });
 
   @override
@@ -311,21 +580,22 @@ class _FilterChip extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: AppBorderRadius.buttonRadius,
+      borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
+        padding: EdgeInsets.symmetric(
+          horizontal: isTablet ? 16 : 12,
+          vertical: isTablet ? 8 : 6,
         ),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withOpacity(0.1)
-              : (isDark ? AppColors.darkSurface : AppColors.surface),
-          borderRadius: AppBorderRadius.buttonRadius,
+              ? ShadcnTheme.accent.withValues(alpha: 0.1)
+              : (isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected
-                ? AppColors.primary
-                : (isDark ? AppColors.darkBorder : AppColors.border),
+                ? ShadcnTheme.accent
+                : (isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border),
+            width: 1,
           ),
         ),
         child: Row(
@@ -333,27 +603,31 @@ class _FilterChip extends StatelessWidget {
           children: [
             Text(
               label,
-              style: AppTextStyles.label.copyWith(
-                color: isSelected ? AppColors.primary : AppColors.textSecondary,
+              style: TextStyle(
+                fontSize: isTablet ? 15 : 14,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: isSelected
+                    ? ShadcnTheme.accent
+                    : ShadTheme.of(context).colorScheme.mutedForeground,
               ),
             ),
             if (count != null && count! > 0) ...[
-              const SizedBox(width: AppSpacing.xs),
+              SizedBox(width: isTablet ? 10 : 8),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
+                  horizontal: 8,
                   vertical: 2,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.error,
-                  borderRadius: BorderRadius.circular(10),
+                  color: ShadcnTheme.statusOpen,
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   count! > 99 ? '99+' : count!.toString(),
                   style: const TextStyle(
-                    color: AppColors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),

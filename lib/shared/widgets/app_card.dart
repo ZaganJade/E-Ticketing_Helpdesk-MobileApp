@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_border_radius.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+import '../../core/theme/shadcn_theme.dart';
 
+/// App Card - Redesigned with shadcn_ui
+/// A reusable card component with consistent styling
 class AppCard extends StatelessWidget {
   final Widget child;
   final VoidCallback? onTap;
@@ -26,18 +27,19 @@ class AppCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     Widget card = Container(
-      padding: padding ?? const EdgeInsets.all(AppSpacing.default_),
+      padding: padding ?? const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: backgroundColor ??
-            (isDark ? AppColors.darkSurface : AppColors.surface),
-        borderRadius: borderRadius ?? AppBorderRadius.cardRadius,
+            (isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted),
+        borderRadius: borderRadius ?? BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? AppColors.darkBorder : AppColors.border,
+          color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+          width: 1,
         ),
         boxShadow: hasShadow
             ? [
                 BoxShadow(
-                  color: AppColors.overlay.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -48,9 +50,8 @@ class AppCard extends StatelessWidget {
     );
 
     if (onTap != null) {
-      card = InkWell(
+      card = GestureDetector(
         onTap: onTap,
-        borderRadius: borderRadius ?? AppBorderRadius.cardRadius,
         child: card,
       );
     }
@@ -59,6 +60,7 @@ class AppCard extends StatelessWidget {
   }
 }
 
+/// Stat Card - For displaying statistics with icon
 class StatCard extends StatelessWidget {
   final String title;
   final String value;
@@ -77,42 +79,159 @@ class StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width >= 600;
+
+    return GestureDetector(
       onTap: onTap,
-      padding: const EdgeInsets.all(AppSpacing.default_),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: AppBorderRadius.buttonRadius,
-            ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 24,
-            ),
+      child: Container(
+        padding: EdgeInsets.all(isTablet ? 24 : 20),
+        decoration: BoxDecoration(
+          color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+            width: 1,
           ),
-          const SizedBox(height: AppSpacing.default_),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: EdgeInsets.all(isTablet ? 12 : 10),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    color.withValues(alpha: 0.2),
+                    color.withValues(alpha: 0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: isTablet ? 28 : 24,
+              ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
+            SizedBox(height: isTablet ? 16 : 12),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: isTablet ? 28 : 24,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: isTablet ? 14 : 13,
+                color: ShadTheme.of(context).colorScheme.mutedForeground,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Info Card - For displaying information with icon and title
+class InfoCard extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final IconData icon;
+  final Color? iconColor;
+  final VoidCallback? onTap;
+
+  const InfoCard({
+    super.key,
+    required this.title,
+    this.subtitle,
+    required this.icon,
+    this.iconColor,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width >= 600;
+    final color = iconColor ?? ShadcnTheme.accent;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.all(isTablet ? 20 : 16),
+        decoration: BoxDecoration(
+          color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+            width: 1,
           ),
-        ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(isTablet ? 12 : 10),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    color.withValues(alpha: 0.2),
+                    color.withValues(alpha: 0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: isTablet ? 24 : 20,
+              ),
+            ),
+            SizedBox(width: isTablet ? 16 : 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: isTablet ? 16 : 15,
+                      fontWeight: FontWeight.w600,
+                      color: ShadTheme.of(context).colorScheme.foreground,
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle!,
+                      style: TextStyle(
+                        fontSize: isTablet ? 14 : 13,
+                        color: ShadTheme.of(context).colorScheme.mutedForeground,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (onTap != null)
+              Icon(
+                Icons.chevron_right,
+                color: ShadTheme.of(context).colorScheme.mutedForeground,
+                size: isTablet ? 24 : 20,
+              ),
+          ],
+        ),
       ),
     );
   }

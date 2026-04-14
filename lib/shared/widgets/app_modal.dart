@@ -1,172 +1,173 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text_styles.dart';
-import '../../../core/theme/app_border_radius.dart';
-import 'app_button.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+import '../../core/theme/shadcn_theme.dart';
 
+/// App Modal - Redesigned to use shadcn_ui ShadDialog
+/// A reusable modal component for showing dialogs and bottom sheets
 class AppModal {
+  /// Show confirmation dialog
   static Future<bool?> showConfirmation({
     required BuildContext context,
     required String title,
     required String message,
-    String confirmText = 'Ya',
-    String cancelText = 'Batal',
-    AppButtonVariant confirmVariant = AppButtonVariant.destructive,
-  }) async {
-    return showDialog<bool>(
+    String? confirmText,
+    String? cancelText,
+    bool isDestructive = false,
+  }) {
+    return showShadDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: AppBorderRadius.cardRadius,
-        ),
-        title: Text(title, style: AppTextStyles.subtitle),
-        content: Text(message, style: AppTextStyles.body),
+      builder: (context) => ShadDialog.alert(
+        title: Text(title),
+        description: Text(message),
         actions: [
-          AppButton(
-            label: cancelText,
-            variant: AppButtonVariant.ghost,
-            onPressed: () => Navigator.of(context).pop(false),
+          ShadButton.outline(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(cancelText ?? 'Batal'),
           ),
-          AppButton(
-            label: confirmText,
-            variant: confirmVariant,
-            onPressed: () => Navigator.of(context).pop(true),
-          ),
+          isDestructive
+              ? ShadButton.destructive(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: Text(confirmText ?? 'Konfirmasi'),
+                )
+              : ShadButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: Text(confirmText ?? 'Konfirmasi'),
+                ),
         ],
       ),
     );
   }
 
+  /// Show info dialog
   static Future<void> showInfo({
     required BuildContext context,
     required String title,
     required String message,
-    String buttonText = 'OK',
-  }) async {
-    return showDialog(
+    String? buttonText,
+  }) {
+    return showShadDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: AppBorderRadius.cardRadius,
-        ),
-        title: Text(title, style: AppTextStyles.subtitle),
-        content: Text(message, style: AppTextStyles.body),
+      builder: (context) => ShadDialog.alert(
+        title: Text(title),
+        description: Text(message),
         actions: [
-          AppButton(
-            label: buttonText,
-            onPressed: () => Navigator.of(context).pop(),
+          ShadButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(buttonText ?? 'OK'),
           ),
         ],
       ),
     );
   }
 
+  /// Show bottom sheet
   static Future<T?> showBottomSheet<T>({
     required BuildContext context,
     required Widget child,
-    bool isDismissible = true,
-    double? maxHeight,
-  }) async {
+    bool isScrollControlled = true,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return showModalBottomSheet<T>(
       context: context,
-      isDismissible: isDismissible,
-      isScrollControlled: true,
+      isScrollControlled: isScrollControlled,
+      backgroundColor: isDark ? ShadcnTheme.darkCard : ShadcnTheme.card,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(16),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) => Container(
-        constraints: maxHeight != null
-            ? BoxConstraints(maxHeight: maxHeight)
-            : null,
-        padding: const EdgeInsets.all(AppSpacing.default_),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.textTertiary.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.default_),
-            Flexible(child: child),
-          ],
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
+        child: child,
       ),
     );
   }
 
-  static Future<void> showLoading({
+  /// Show custom dialog
+  static Future<T?> showCustomDialog<T>({
     required BuildContext context,
-    String? message,
-  }) async {
-    return showDialog(
+    required Widget child,
+    String? title,
+  }) {
+    return showShadDialog<T>(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => WillPopScope(
-        onWillPop: () async => false,
-        child: AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: AppBorderRadius.cardRadius,
-          ),
-          content: Row(
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(width: AppSpacing.default_),
-              Text(
-                message ?? 'Memuat...',
-                style: AppTextStyles.body,
-              ),
-            ],
-          ),
-        ),
+      builder: (context) => ShadDialog(
+        title: title != null ? Text(title) : null,
+        child: child,
       ),
     );
-  }
-
-  static void hideLoading(BuildContext context) {
-    Navigator.of(context, rootNavigator: true).pop();
   }
 }
 
-class AppBottomSheet extends StatelessWidget {
+/// App Dialog - A simple dialog component
+class AppDialog extends StatelessWidget {
   final String? title;
-  final Widget child;
+  final String? description;
+  final Widget? content;
   final List<Widget>? actions;
 
-  const AppBottomSheet({
+  const AppDialog({
     super.key,
     this.title,
-    required this.child,
+    this.description,
+    this.content,
     this.actions,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (title != null) ...[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(title!, style: AppTextStyles.subtitle),
-              if (actions != null)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: actions!,
-                ),
-            ],
+    return ShadDialog(
+      title: title != null ? Text(title!) : null,
+      description: description != null ? Text(description!) : null,
+      actions: actions ?? [],
+      child: content,
+    );
+  }
+}
+
+/// App Alert Dialog - Alert style dialog
+class AppAlertDialog extends StatelessWidget {
+  final String title;
+  final String description;
+  final String? confirmText;
+  final String? cancelText;
+  final VoidCallback? onConfirm;
+  final VoidCallback? onCancel;
+  final bool isDestructive;
+
+  const AppAlertDialog({
+    super.key,
+    required this.title,
+    required this.description,
+    this.confirmText,
+    this.cancelText,
+    this.onConfirm,
+    this.onCancel,
+    this.isDestructive = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ShadDialog.alert(
+      title: Text(title),
+      description: Text(description),
+      actions: [
+        if (onCancel != null)
+          ShadButton.outline(
+            onPressed: onCancel,
+            child: Text(cancelText ?? 'Batal'),
           ),
-          const SizedBox(height: AppSpacing.default_),
-        ],
-        Flexible(child: child),
+        if (isDestructive)
+          ShadButton.destructive(
+            onPressed: onConfirm,
+            child: Text(confirmText ?? 'Konfirmasi'),
+          )
+        else
+          ShadButton(
+            onPressed: onConfirm,
+            child: Text(confirmText ?? 'Konfirmasi'),
+          ),
       ],
     );
   }

@@ -118,15 +118,29 @@ class NotifikasiRepository {
     throw Exception('Fitur hapus notifikasi belum tersedia');
   }
 
-  // Subscribe to notifikasi changes (realtime)
-  // Note: Realtime requires Supabase, will be disabled if Supabase is unavailable
-  Stream<List<Map<String, dynamic>>> subscribeToNotifikasi() async* {
-    // Return empty stream since we're using Backend API
-    // Realtime updates would need a different approach (WebSocket, polling, etc.)
-    await for (final _ in Stream.periodic(const Duration(seconds: 30)).asyncMap(
+  // Subscribe to notifikasi changes (smart polling - only emit when there are new notifications)
+  Stream<List<NotifikasiModel>> subscribeToNotifikasi() async* {
+    DateTime? lastLatestTimestamp;
+
+    await for (final notifikasiList in Stream.periodic(const Duration(seconds: 30)).asyncMap(
       (_) => getNotifikasiList(onlyUnread: true),
     )) {
-      yield [];
+      // Check if there are new notifications by comparing timestamps
+      if (notifikasiList.isNotEmpty) {
+        final latestNotifikasi = notifikasiList.first;
+        final currentLatestTimestamp = latestNotifikasi.dibuatPada;
+
+        // Only emit if this is the first check OR there are new notifications
+        if (lastLatestTimestamp == null || currentLatestTimestamp.isAfter(lastLatestTimestamp)) {
+          lastLatestTimestamp = currentLatestTimestamp;
+          yield notifikasiList;
+        }
+      } else if (lastLatestTimestamp != null) {
+        // If previously there were notifications but now empty, update timestamp
+        lastLatestTimestamp = null;
+        yield [];
+      }
+      // If no change, don't emit to avoid unnecessary rebuilds
     }
   }
 }

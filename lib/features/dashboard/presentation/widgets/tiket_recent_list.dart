@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import '../../../../core/theme/app_border_radius.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/theme/app_text_styles.dart';
-import '../../../../shared/widgets/status_badge.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+
+import '../../../../core/theme/shadcn_theme.dart';
 import '../../../tiket/domain/entities/tiket.dart';
 
-/// Modern list of recent tickets for dashboard
-class TiketRecentList extends StatefulWidget {
+/// Recent Tickets with modern, consistent design - Fully Responsive
+class TiketRecentList extends StatelessWidget {
   final List<Tiket> tiketList;
   final VoidCallback? onViewAll;
-  final Function(Tiket)? onTapTiket;
+  final void Function(Tiket)? onTapTiket;
   final bool isLoading;
 
   const TiketRecentList({
@@ -23,362 +20,219 @@ class TiketRecentList extends StatefulWidget {
   });
 
   @override
-  State<TiketRecentList> createState() => _TiketRecentListState();
-}
-
-class _TiketRecentListState extends State<TiketRecentList>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    if (!widget.isLoading && widget.tiketList.isNotEmpty) {
-      _animationController.forward();
-    }
-  }
-
-  @override
-  void didUpdateWidget(TiketRecentList oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!widget.isLoading &&
-        widget.tiketList.isNotEmpty &&
-        oldWidget.tiketList != widget.tiketList) {
-      _animationController.forward(from: 0);
-    }
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width >= 600;
+    final horizontalPadding = isTablet ? 24.0 : 16.0;
 
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: isDark
-              ? [
-                  AppColors.darkSurface.withValues(alpha: 0.6),
-                  AppColors.darkSurface.withValues(alpha: 0.3),
-                ]
-              : [
-                  Colors.white.withValues(alpha: 0.8),
-                  Colors.white.withValues(alpha: 0.4),
-                ],
-        ),
-        borderRadius: AppBorderRadius.cardRadius,
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.1)
-              : Colors.white.withValues(alpha: 0.5),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.black.withValues(alpha: 0.2)
-                : AppColors.primary.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.primary.withValues(alpha: 0.2),
-                          AppColors.primary.withValues(alpha: 0.1),
-                        ],
+      margin: EdgeInsets.symmetric(horizontal: horizontalPadding),
+      child: ShadCard(
+        padding: EdgeInsets.all(isTablet ? 24 : 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(isTablet ? 12 : 10),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            ShadcnTheme.accent.withValues(alpha: 0.2),
+                            ShadcnTheme.accent.withValues(alpha: 0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      borderRadius: BorderRadius.circular(10),
+                      child: Icon(
+                        Icons.history_rounded,
+                        color: ShadcnTheme.accent,
+                        size: isTablet ? 24 : 20,
+                      ),
                     ),
-                    child: Icon(
-                      Icons.history_rounded,
-                      color: AppColors.primary,
-                      size: 20,
+                    SizedBox(width: isTablet ? 16 : 12),
+                    Text(
+                      'Tiket Terbaru',
+                      style: TextStyle(
+                        fontSize: isTablet ? 18 : 16,
+                        fontWeight: FontWeight.w600,
+                        color: ShadTheme.of(context).colorScheme.foreground,
+                        letterSpacing: -0.3,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    'Tiket Terbaru',
-                    style: AppTextStyles.title.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-              if (widget.onViewAll != null)
-                TextButton.icon(
-                  onPressed: widget.onViewAll,
-                  icon: const Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 18,
-                  ),
-                  label: const Text('Lihat Semua'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    textStyle: AppTextStyles.bodySmall.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  ],
                 ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.default_),
-
-          // List
-          if (widget.isLoading)
-            _buildSkeletonList()
-          else if (widget.tiketList.isEmpty)
-            _buildEmptyState()
-          else
-            _buildList(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildList() {
-    return Column(
-      children: List.generate(
-        widget.tiketList.take(5).length,
-        (index) {
-          final tiket = widget.tiketList[index];
-          final animation = Tween<double>(begin: 0, end: 1).animate(
-            CurvedAnimation(
-              parent: _animationController,
-              curve: Interval(
-                index * 0.1,
-                0.6 + index * 0.1,
-                curve: Curves.easeOutCubic,
+                if (onViewAll != null && !isLoading)
+                  ShadButton.ghost(
+                    size: ShadButtonSize.sm,
+                    onPressed: onViewAll,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Lihat Semua',
+                          style: TextStyle(
+                            fontSize: isTablet ? 14 : 12,
+                            fontWeight: FontWeight.w500,
+                            color: ShadcnTheme.accent,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.arrow_forward_rounded,
+                          size: isTablet ? 16 : 14,
+                          color: ShadcnTheme.accent,
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+            SizedBox(height: isTablet ? 8 : 4),
+            Text(
+              '${tiketList.length} tiket baru-baru ini',
+              style: TextStyle(
+                fontSize: isTablet ? 14 : 13,
+                fontWeight: FontWeight.w400,
+                color: ShadTheme.of(context).colorScheme.mutedForeground,
               ),
             ),
-          );
-
-          return AnimatedBuilder(
-            animation: animation,
-            builder: (context, child) {
-              return Opacity(
-                opacity: animation.value,
-                child: Transform.translate(
-                  offset: Offset(0, 20 * (1 - animation.value)),
-                  child: child,
-                ),
-              );
-            },
-            child: _TiketCardMini(
-              tiket: tiket,
-              onTap: widget.onTapTiket != null
-                  ? () => widget.onTapTiket!(tiket)
-                  : null,
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildSkeletonList() {
-    return Column(
-      children: List.generate(3, (index) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-          padding: const EdgeInsets.all(AppSpacing.default_),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: AppBorderRadius.cardRadius,
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 80,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: AppColors.shimmerBase,
-                      borderRadius: AppBorderRadius.badgeRadius,
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    width: 60,
-                    height: 14,
-                    decoration: BoxDecoration(
-                      color: AppColors.shimmerBase,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ],
+            SizedBox(height: isTablet ? 20 : 16),
+            // Content
+            if (isLoading)
+              _buildSkeletonList(context, isDark, isTablet)
+            else if (tiketList.isEmpty)
+              _buildEmptyState(context, isDark, isTablet)
+            else
+              Column(
+                children: tiketList.take(5).map((tiket) => _TicketCard(
+                  tiket: tiket,
+                  onTap: onTapTiket != null ? () => onTapTiket!(tiket) : null,
+                  isTablet: isTablet,
+                )).toList(),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              Container(
-                width: double.infinity,
-                height: 18,
-                decoration: BoxDecoration(
-                  color: AppColors.shimmerBase,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ],
-          ),
-        );
-      }),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.background.withValues(alpha: 0.5),
-            AppColors.background.withValues(alpha: 0.3),
           ],
         ),
-        borderRadius: AppBorderRadius.cardRadius,
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, bool isDark, bool isTablet) {
+    return Container(
+      padding: EdgeInsets.all(isTablet ? 40 : 32),
+      decoration: BoxDecoration(
+        color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppColors.border.withValues(alpha: 0.5),
+          color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+          width: 1,
         ),
       ),
       child: Center(
         child: Column(
           children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.primary.withValues(alpha: 0.1),
-                    AppColors.primary.withValues(alpha: 0.05),
-                  ],
-                ),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.confirmation_number_outlined,
-                size: 48,
-                color: AppColors.primary.withValues(alpha: 0.5),
-              ),
+            Icon(
+              Icons.inbox_outlined,
+              size: isTablet ? 56 : 48,
+              color: isDark ? ShadcnTheme.darkMutedForeground : ShadcnTheme.mutedForeground,
             ),
-            const SizedBox(height: AppSpacing.default_),
+            const SizedBox(height: 12),
             Text(
               'Belum ada tiket',
-              style: AppTextStyles.subtitle.copyWith(
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w600,
+              style: TextStyle(
+                fontSize: isTablet ? 16 : 14,
+                fontWeight: FontWeight.w500,
+                color: ShadTheme.of(context).colorScheme.foreground,
               ),
             ),
-            const SizedBox(height: AppSpacing.xs),
+            const SizedBox(height: 4),
             Text(
-              'Tiket yang Anda buat akan muncul di sini',
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.textMuted,
+              'Buat tiket baru untuk memulai',
+              style: TextStyle(
+                fontSize: isTablet ? 14 : 12,
+                color: ShadTheme.of(context).colorScheme.mutedForeground,
               ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),
       ),
     );
   }
+
+  Widget _buildSkeletonList(BuildContext context, bool isDark, bool isTablet) {
+    return Column(
+      children: List.generate(3, (index) => Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: EdgeInsets.all(isTablet ? 20 : 16),
+        decoration: BoxDecoration(
+          color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: isTablet ? 48 : 40,
+              height: isTablet ? 48 : 40,
+              decoration: BoxDecoration(
+                color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            SizedBox(width: isTablet ? 16 : 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: isTablet ? 180 : 150,
+                    height: isTablet ? 18 : 16,
+                    decoration: BoxDecoration(
+                      color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    width: isTablet ? 120 : 100,
+                    height: isTablet ? 14 : 12,
+                    decoration: BoxDecoration(
+                      color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      )),
+    );
+  }
 }
 
-/// Modern mini ticket card with status accent
-class _TiketCardMini extends StatefulWidget {
+/// Individual ticket card - Responsive
+class _TicketCard extends StatelessWidget {
   final Tiket tiket;
-  final VoidCallback? onTap;
+  final void Function()? onTap;
+  final bool isTablet;
 
-  const _TiketCardMini({
+  const _TicketCard({
     required this.tiket,
     this.onTap,
+    required this.isTablet,
   });
-
-  @override
-  State<_TiketCardMini> createState() => _TiketCardMiniState();
-}
-
-class _TiketCardMiniState extends State<_TiketCardMini>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-  bool _isPressed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 150),
-    );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeOutCubic,
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  Color _getStatusColor() {
-    switch (widget.tiket.status) {
-      case StatusTiket.terbuka:
-        return AppColors.statusTerbuka;
-      case StatusTiket.diproses:
-        return AppColors.statusDiproses;
-      case StatusTiket.selesai:
-        return AppColors.statusSelesai;
-      default:
-        return AppColors.textSecondary;
-    }
-  }
-
-  void _onTapDown(_) {
-    setState(() => _isPressed = true);
-    _controller.forward();
-    HapticFeedback.lightImpact();
-  }
-
-  void _onTapUp(_) {
-    setState(() => _isPressed = false);
-    _controller.reverse();
-    widget.onTap?.call();
-  }
-
-  void _onTapCancel() {
-    setState(() => _isPressed = false);
-    _controller.reverse();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -386,174 +240,224 @@ class _TiketCardMiniState extends State<_TiketCardMini>
     final statusColor = _getStatusColor();
 
     return GestureDetector(
-      onTapDown: _onTapDown,
-      onTapUp: _onTapUp,
-      onTapCancel: _onTapCancel,
-      child: AnimatedBuilder(
-        animation: _scaleAnimation,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scaleAnimation.value,
-            child: Container(
-              margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: isDark
-                      ? [
-                          AppColors.darkSurface.withValues(alpha: 0.8),
-                          AppColors.darkSurface.withValues(alpha: 0.5),
-                        ]
-                      : [
-                          Colors.white.withValues(alpha: 0.9),
-                          Colors.white.withValues(alpha: 0.6),
-                        ],
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+            width: 1,
+          ),
+        ),
+        child: IntrinsicHeight(
+          child: Row(
+            children: [
+              // Left accent bar
+              Container(
+                width: 4,
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  borderRadius: const BorderRadius.horizontal(
+                    left: Radius.circular(12),
+                  ),
                 ),
-                borderRadius: AppBorderRadius.cardRadius,
-                border: Border.all(
-                  color: _isPressed
-                      ? statusColor.withValues(alpha: 0.5)
-                      : statusColor.withValues(alpha: 0.2),
-                  width: _isPressed ? 2 : 1,
-                ),
-                boxShadow: _isPressed
-                    ? [
-                        BoxShadow(
-                          color: statusColor.withValues(alpha: 0.15),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ]
-                    : [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.03),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
               ),
-              child: ClipRRect(
-                borderRadius: AppBorderRadius.cardRadius,
-                child: IntrinsicHeight(
-                  child: Row(
+              // Content
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(isTablet ? 16 : 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Status accent bar
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        width: _isPressed ? 6 : 4,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              statusColor,
-                              statusColor.withValues(alpha: 0.7),
-                            ],
-                          ),
-                        ),
-                      ),
-                      // Content
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.all(AppSpacing.default_),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  StatusBadgeFromString(
-                                    status: widget.tiket.status.name,
+                      Row(
+                        children: [
+                          // Status badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(_getStatusIcon(), size: 12, color: statusColor),
+                                const SizedBox(width: 4),
+                                Text(
+                                  tiket.status.displayName,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: statusColor,
                                   ),
-                                  const Spacer(),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.textMuted.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.access_time_rounded,
-                                          size: 12,
-                                          color: AppColors.textMuted,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          _formatDate(widget.tiket.dibuatPada),
-                                          style: AppTextStyles.caption.copyWith(
-                                            color: AppColors.textMuted,
-                                            fontSize: 11,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: AppSpacing.sm),
-                              Text(
-                                widget.tiket.judul,
-                                style: AppTextStyles.body.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: isDark
-                                      ? AppColors.darkTextPrimary
-                                      : AppColors.textPrimary,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              if (widget.tiket.namaPembuat != null) ...[
-                                const SizedBox(height: AppSpacing.xs),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.person_outline_rounded,
-                                      size: 14,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      widget.tiket.namaPembuat!,
-                                      style: AppTextStyles.caption.copyWith(
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
-                                  ],
                                 ),
                               ],
-                            ],
+                            ),
                           ),
+                          const Spacer(),
+                          // Date
+                          Text(
+                            _formatDate(tiket.dibuatPada),
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w400,
+                              color: ShadTheme.of(context).colorScheme.mutedForeground,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: isTablet ? 10 : 8),
+                      // Title
+                      Text(
+                        tiket.judul,
+                        style: TextStyle(
+                          fontSize: isTablet ? 15 : 14,
+                          fontWeight: FontWeight.w600,
+                          color: ShadTheme.of(context).colorScheme.foreground,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
               ),
-            ),
-          );
-        },
+            ],
+          ),
+        ),
       ),
     );
+  }
+
+  Color _getStatusColor() {
+    return switch (tiket.status) {
+      StatusTiket.terbuka => ShadcnTheme.statusOpen,
+      StatusTiket.diproses => ShadcnTheme.statusInProgress,
+      StatusTiket.selesai => ShadcnTheme.statusDone,
+    };
+  }
+
+  IconData _getStatusIcon() {
+    return switch (tiket.status) {
+      StatusTiket.terbuka => Icons.radio_button_unchecked_rounded,
+      StatusTiket.diproses => Icons.sync_rounded,
+      StatusTiket.selesai => Icons.check_circle_rounded,
+    };
   }
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final diff = now.difference(date);
+    if (diff.inDays > 0) return '${diff.inDays}h lalu';
+    if (diff.inHours > 0) return '${diff.inHours}j lalu';
+    if (diff.inMinutes > 0) return '${diff.inMinutes}m lalu';
+    return 'Baru';
+  }
+}
 
-    if (diff.inDays > 0) {
-      return '${diff.inDays}h lalu';
-    } else if (diff.inHours > 0) {
-      return '${diff.inHours}j lalu';
-    } else if (diff.inMinutes > 0) {
-      return '${diff.inMinutes}m lalu';
-    } else {
-      return 'Baru';
-    }
+/// Skeleton loading state - Responsive
+class TiketRecentListSkeleton extends StatelessWidget {
+  final bool isDark;
+  const TiketRecentListSkeleton({super.key, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width >= 600;
+    final horizontalPadding = isTablet ? 24.0 : 16.0;
+
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: horizontalPadding),
+      child: ShadCard(
+        padding: EdgeInsets.all(isTablet ? 24 : 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: isTablet ? 44 : 40,
+                  height: isTablet ? 44 : 40,
+                  decoration: BoxDecoration(
+                    color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  width: isTablet ? 140 : 120,
+                  height: isTablet ? 28 : 24,
+                  decoration: BoxDecoration(
+                    color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  width: isTablet ? 100 : 80,
+                  height: isTablet ? 32 : 28,
+                  decoration: BoxDecoration(
+                    color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: isTablet ? 20 : 16),
+            ...List.generate(3, (index) => Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: EdgeInsets.all(isTablet ? 20 : 16),
+              decoration: BoxDecoration(
+                color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: isTablet ? 48 : 40,
+                    height: isTablet ? 48 : 40,
+                    decoration: BoxDecoration(
+                      color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  SizedBox(width: isTablet ? 16 : 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: isTablet ? 180 : 150,
+                          height: isTablet ? 18 : 16,
+                          decoration: BoxDecoration(
+                            color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          width: isTablet ? 120 : 100,
+                          height: isTablet ? 14 : 12,
+                          decoration: BoxDecoration(
+                            color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )),
+          ],
+        ),
+      ),
+    );
   }
 }

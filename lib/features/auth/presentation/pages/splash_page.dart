@@ -3,14 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/theme/app_text_styles.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+import '../../../../core/theme/shadcn_theme.dart';
 import '../cubit/auth_cubit.dart';
 
 final _logger = Logger();
 
-/// Splash screen with animation and auto-login check
+/// Splash screen with animation and auto-login check - Redesigned with shadcn_ui
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
 
@@ -68,7 +67,6 @@ class _SplashPageState extends State<SplashPage>
   }
 
   void _checkAuthStatus() {
-    // Trigger auth check
     context.read<AuthCubit>().checkAuthStatus();
   }
 
@@ -85,7 +83,6 @@ class _SplashPageState extends State<SplashPage>
   void _attemptNavigation() {
     if (!_authCheckComplete || !_animationComplete) return;
 
-    // Calculate remaining time to meet minimum display duration
     final elapsed = DateTime.now().difference(_startTime!);
     final remaining = _minimumDisplayDuration - elapsed;
 
@@ -103,11 +100,9 @@ class _SplashPageState extends State<SplashPage>
     _logger.i('[SplashPage] Navigating based on auth state: $authState');
 
     if (authState is Authenticated) {
-      // Navigate to Dashboard
       _logger.i('[SplashPage] Navigating to /dashboard');
       context.go('/dashboard');
     } else {
-      // Navigate to Login
       _logger.i('[SplashPage] Navigating to /login');
       context.go('/login');
     }
@@ -121,10 +116,13 @@ class _SplashPageState extends State<SplashPage>
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width >= 600;
+
     return BlocListener<AuthCubit, AuthState>(
       listener: _onAuthStateChanged,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: ShadTheme.of(context).colorScheme.background,
         body: Center(
           child: AnimatedBuilder(
             animation: _animationController,
@@ -140,51 +138,63 @@ class _SplashPageState extends State<SplashPage>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // App Logo
+                // App Logo with gradient
                 Container(
-                  width: 120,
-                  height: 120,
+                  width: isTablet ? 140 : 120,
+                  height: isTablet ? 140 : 120,
                   decoration: BoxDecoration(
-                    color: AppColors.primary,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        ShadcnTheme.accent.withValues(alpha: 0.8),
+                        ShadcnTheme.accent,
+                      ],
+                    ),
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withOpacity(0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
+                        color: ShadcnTheme.accent.withValues(alpha: 0.3),
+                        blurRadius: 24,
+                        offset: const Offset(0, 12),
                       ),
                     ],
                   ),
-                  child: const Icon(
-                    Icons.confirmation_number,
-                    size: 64,
-                    color: AppColors.white,
+                  child: Icon(
+                    Icons.confirmation_number_rounded,
+                    size: isTablet ? 72 : 64,
+                    color: Colors.white,
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xl),
+                SizedBox(height: isTablet ? 32 : 24),
                 // App Name
                 Text(
                   'E-Ticketing',
-                  style: AppTextStyles.headline.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
+                  style: TextStyle(
+                    fontSize: isTablet ? 32 : 28,
+                    fontWeight: FontWeight.w800,
+                    color: ShadTheme.of(context).colorScheme.foreground,
+                    letterSpacing: -0.5,
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xs),
+                const SizedBox(height: 8),
                 Text(
                   'Helpdesk',
-                  style: AppTextStyles.subtitle.copyWith(
-                    color: AppColors.textSecondary,
+                  style: TextStyle(
+                    fontSize: isTablet ? 18 : 16,
+                    fontWeight: FontWeight.w500,
+                    color: ShadTheme.of(context).colorScheme.mutedForeground,
+                    letterSpacing: 2,
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xxl),
-                // Loading indicator
-                const SizedBox(
-                  width: 24,
-                  height: 24,
+                SizedBox(height: isTablet ? 48 : 40),
+                // Loading indicator with accent color
+                SizedBox(
+                  width: isTablet ? 28 : 24,
+                  height: isTablet ? 28 : 24,
                   child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(ShadcnTheme.accent),
                   ),
                 ),
               ],

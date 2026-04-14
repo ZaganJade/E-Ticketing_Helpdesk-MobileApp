@@ -1,18 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import '../../../../core/di/injection.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/theme/app_text_styles.dart';
-import '../../../../shared/widgets/empty_state.dart';
-import '../../../../shared/widgets/error_state.dart';
-import '../../../../shared/widgets/skeleton_loading.dart';
+import '../../../../core/theme/shadcn_theme.dart';
 import '../../domain/entities/komentar.dart';
 import '../../domain/repositories/komentar_repository.dart';
 import '../cubit/komentar_cubit.dart';
 import 'komentar_card.dart';
 
-/// Widget for displaying a list of komentar with realtime updates
+/// Widget for displaying a list of komentar with realtime updates - Redesigned with shadcn_ui
 /// Returns a SliverList for use inside CustomScrollView
 class KomentarList extends StatefulWidget {
   final String tiketId;
@@ -33,6 +29,10 @@ class _KomentarListState extends State<KomentarList> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width >= 600;
+
     return BlocProvider(
       create: (context) => KomentarCubit(
         komentarRepository: getIt<KomentarRepository>(),
@@ -47,18 +47,18 @@ class _KomentarListState extends State<KomentarList> {
         },
         builder: (context, state) {
           if (state is KomentarLoading) {
-            return _buildLoadingSliver();
+            return _buildLoadingSliver(isDark, isTablet);
           }
 
           if (state is KomentarError) {
-            return _buildErrorSliver(context, state.message);
+            return _buildErrorSliver(context, state.message, isTablet);
           }
 
           if (state is KomentarLoaded) {
             if (state.isEmpty) {
-              return _buildEmptySliver();
+              return _buildEmptySliver(isDark, isTablet);
             }
-            return _buildKomentarSliverList(state);
+            return _buildKomentarSliverList(state, isTablet);
           }
 
           return const SliverToBoxAdapter(child: SizedBox.shrink());
@@ -67,28 +67,54 @@ class _KomentarListState extends State<KomentarList> {
     );
   }
 
-  Widget _buildLoadingSliver() {
+  Widget _buildLoadingSliver(bool isDark, bool isTablet) {
     return SliverList(
       delegate: SliverChildBuilderDelegate(
         (context, index) {
           return Padding(
-            padding: const EdgeInsets.only(
-              left: AppSpacing.default_,
-              right: AppSpacing.default_,
-              bottom: AppSpacing.default_,
+            padding: EdgeInsets.symmetric(
+              horizontal: isTablet ? 24 : 16,
+              vertical: isTablet ? 12 : 8,
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SkeletonLoading(width: 36, height: 36, borderRadius: 18),
-                const SizedBox(width: AppSpacing.sm),
+                // Avatar skeleton
+                Container(
+                  width: isTablet ? 40 : 36,
+                  height: isTablet ? 40 : 36,
+                  decoration: BoxDecoration(
+                    color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                SizedBox(width: isTablet ? 16 : 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SkeletonLoading(width: 120, height: 14),
-                      const SizedBox(height: AppSpacing.xs),
-                      const SkeletonLoading(width: double.infinity, height: 60),
+                      // Name skeleton
+                      Container(
+                        width: 120,
+                        height: isTablet ? 16 : 14,
+                        decoration: BoxDecoration(
+                          color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // Message skeleton
+                      Container(
+                        width: double.infinity,
+                        height: isTablet ? 70 : 60,
+                        decoration: BoxDecoration(
+                          color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -101,39 +127,140 @@ class _KomentarListState extends State<KomentarList> {
     );
   }
 
-  Widget _buildErrorSliver(BuildContext context, String message) {
+  Widget _buildErrorSliver(BuildContext context, String message, bool isTablet) {
     return SliverFillRemaining(
       hasScrollBody: false,
-      child: ErrorState(
-        title: 'Gagal memuat komentar',
-        subtitle: message,
-        onRetry: () {
-          context.read<KomentarCubit>().refresh();
-        },
+      child: Center(
+        child: Container(
+          margin: EdgeInsets.all(isTablet ? 24 : 16),
+          padding: EdgeInsets.all(isTablet ? 32 : 24),
+          decoration: BoxDecoration(
+            color: ShadcnTheme.statusOpen.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: ShadcnTheme.statusOpen.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.error_outline_rounded,
+                size: isTablet ? 56 : 48,
+                color: ShadcnTheme.statusOpen,
+              ),
+              SizedBox(height: isTablet ? 16 : 12),
+              Text(
+                'Gagal memuat komentar',
+                style: TextStyle(
+                  fontSize: isTablet ? 18 : 16,
+                  fontWeight: FontWeight.w600,
+                  color: ShadTheme.of(context).colorScheme.foreground,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                style: TextStyle(
+                  fontSize: isTablet ? 15 : 14,
+                  color: ShadTheme.of(context).colorScheme.mutedForeground,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: isTablet ? 24 : 20),
+              ShadButton(
+                backgroundColor: ShadcnTheme.accent,
+                onPressed: () => context.read<KomentarCubit>().refresh(),
+                child: Text(
+                  'Coba Lagi',
+                  style: TextStyle(
+                    fontSize: isTablet ? 15 : 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildEmptySliver() {
+  Widget _buildEmptySliver(bool isDark, bool isTablet) {
     return SliverFillRemaining(
       hasScrollBody: false,
-      child: EmptyState(
-        icon: Icons.chat_bubble_outline,
-        title: 'Belum ada komentar',
-        subtitle: 'Jadilah yang pertama memberikan komentar pada tiket ini',
-        actionLabel: 'Refresh',
-        onAction: () {
-          context.read<KomentarCubit>().refresh();
-        },
+      child: Center(
+        child: Container(
+          margin: EdgeInsets.all(isTablet ? 24 : 16),
+          padding: EdgeInsets.all(isTablet ? 40 : 32),
+          decoration: BoxDecoration(
+            color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: isTablet ? 56 : 48,
+                color: isDark
+                    ? ShadcnTheme.darkMutedForeground
+                    : ShadcnTheme.mutedForeground,
+              ),
+              SizedBox(height: isTablet ? 16 : 12),
+              Text(
+                'Belum ada komentar',
+                style: TextStyle(
+                  fontSize: isTablet ? 18 : 16,
+                  fontWeight: FontWeight.w600,
+                  color: ShadTheme.of(context).colorScheme.foreground,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Jadilah yang pertama memberikan komentar',
+                style: TextStyle(
+                  fontSize: isTablet ? 15 : 14,
+                  color: ShadTheme.of(context).colorScheme.mutedForeground,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: isTablet ? 24 : 20),
+              ShadButton.outline(
+                onPressed: () => context.read<KomentarCubit>().refresh(),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.refresh_rounded,
+                      size: isTablet ? 18 : 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Refresh',
+                      style: TextStyle(
+                        fontSize: isTablet ? 15 : 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildKomentarSliverList(KomentarLoaded state) {
+  Widget _buildKomentarSliverList(KomentarLoaded state, bool isTablet) {
     return SliverPadding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.default_,
-        vertical: AppSpacing.sm,
+      padding: EdgeInsets.symmetric(
+        horizontal: isTablet ? 24 : 16,
+        vertical: isTablet ? 12 : 8,
       ),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
@@ -143,7 +270,9 @@ class _KomentarListState extends State<KomentarList> {
             final isNew = komentar.id == state.newKomentarId;
 
             return Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.default_),
+              padding: EdgeInsets.only(
+                bottom: isTablet ? 16 : 12,
+              ),
               child: KomentarCard(
                 komentar: komentar,
                 isCurrentUser: isCurrentUser,

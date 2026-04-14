@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text_styles.dart';
-import '../../../core/theme/app_border_radius.dart';
-import 'app_button.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+import '../../core/theme/shadcn_theme.dart';
 
+/// Error State - Redesigned with shadcn_ui
+/// A reusable component for displaying error states
 class ErrorState extends StatelessWidget {
   final String? title;
   final String? subtitle;
   final String? retryLabel;
   final VoidCallback? onRetry;
+  final Color? iconColor;
 
   const ErrorState({
     super.key,
@@ -17,6 +17,7 @@ class ErrorState extends StatelessWidget {
     this.subtitle,
     this.retryLabel,
     this.onRetry,
+    this.iconColor,
   });
 
   factory ErrorState.network({VoidCallback? onRetry}) {
@@ -57,56 +58,88 @@ class ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width >= 600;
+    final color = iconColor ?? ShadcnTheme.destructive;
+
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.error_outline,
-                size: 48,
-                color: AppColors.error,
-              ),
+        padding: EdgeInsets.all(isTablet ? 40 : 32),
+        child: Container(
+          padding: EdgeInsets.all(isTablet ? 40 : 32),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: color.withValues(alpha: 0.2),
             ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              title ?? 'Terjadi kesalahan',
-              style: AppTextStyles.subtitle,
-              textAlign: TextAlign.center,
-            ),
-            if (subtitle != null) ...[
-              const SizedBox(height: AppSpacing.xs),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: EdgeInsets.all(isTablet ? 24 : 20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      color.withValues(alpha: 0.2),
+                      color.withValues(alpha: 0.1),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  Icons.error_outline,
+                  size: isTablet ? 56 : 48,
+                  color: color,
+                ),
+              ),
+              SizedBox(height: isTablet ? 24 : 20),
               Text(
-                subtitle!,
-                style: AppTextStyles.caption.copyWith(
-                  color: AppColors.textSecondary,
+                title ?? 'Terjadi kesalahan',
+                style: TextStyle(
+                  fontSize: isTablet ? 18 : 16,
+                  fontWeight: FontWeight.w600,
+                  color: color,
                 ),
                 textAlign: TextAlign.center,
               ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  subtitle!,
+                  style: TextStyle(
+                    fontSize: isTablet ? 15 : 14,
+                    color: ShadTheme.of(context).colorScheme.mutedForeground,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              if (onRetry != null) ...[
+                SizedBox(height: isTablet ? 24 : 20),
+                ShadButton.outline(
+                  onPressed: onRetry,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.refresh, size: 18),
+                      const SizedBox(width: 8),
+                      Text(retryLabel ?? 'Coba Lagi'),
+                    ],
+                  ),
+                ),
+              ],
             ],
-            if (onRetry != null) ...[
-              const SizedBox(height: AppSpacing.lg),
-              AppButton(
-                label: retryLabel ?? 'Coba Lagi',
-                variant: AppButtonVariant.outline,
-                icon: Icons.refresh,
-                onPressed: onRetry,
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
+/// Inline Error - For displaying inline error messages
 class InlineError extends StatelessWidget {
   final String message;
   final VoidCallback? onRetry;
@@ -119,37 +152,39 @@ class InlineError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.width >= 600;
+
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.default_),
+      padding: EdgeInsets.all(isTablet ? 16 : 12),
       decoration: BoxDecoration(
-        color: AppColors.error.withOpacity(0.1),
-        borderRadius: AppBorderRadius.buttonRadius,
-        border: Border.all(color: AppColors.error.withOpacity(0.3)),
+        color: ShadcnTheme.destructive.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: ShadcnTheme.destructive.withValues(alpha: 0.3),
+        ),
       ),
       child: Row(
         children: [
           Icon(
             Icons.error_outline,
-            size: 20,
-            color: AppColors.error,
+            size: isTablet ? 24 : 20,
+            color: ShadcnTheme.destructive,
           ),
-          const SizedBox(width: AppSpacing.sm),
+          SizedBox(width: isTablet ? 16 : 12),
           Expanded(
             child: Text(
               message,
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.error,
+              style: TextStyle(
+                fontSize: isTablet ? 14 : 13,
+                color: ShadcnTheme.destructive,
               ),
             ),
           ),
           if (onRetry != null)
-            IconButton(
-              icon: Icon(
-                Icons.refresh,
-                size: 20,
-                color: AppColors.error,
-              ),
+            ShadButton.ghost(
+              size: ShadButtonSize.sm,
               onPressed: onRetry,
+              child: const Icon(Icons.refresh, size: 20),
             ),
         ],
       ),

@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import '../../../../core/di/injection.dart';
-import '../../../../core/theme/app_border_radius.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/theme/app_text_styles.dart';
-import '../../../../shared/widgets/app_toast.dart';
+import '../../../../core/theme/shadcn_theme.dart';
 import '../../domain/entities/komentar.dart';
 import '../../domain/repositories/komentar_repository.dart';
 import '../cubit/komentar_input_cubit.dart';
 import 'komentar_list.dart';
 
-/// Fixed bottom input widget for komentar
+/// Fixed bottom input widget for komentar - Redesigned with shadcn_ui
 class KomentarInput extends StatelessWidget {
   final String tiketId;
   final Function(Komentar)? onKomentarSubmitted;
@@ -94,95 +91,61 @@ class _KomentarInputViewState extends State<KomentarInputView> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width >= 600;
+
     return BlocConsumer<KomentarInputCubit, KomentarInputState>(
       listener: (context, state) {
         if (state.status == KomentarInputStatus.error &&
             state.errorMessage != null) {
-          AppToast.error(context, state.errorMessage!);
+          ShadToaster.of(context).show(
+            ShadToast.destructive(
+              title: const Text('Error'),
+              description: Text(state.errorMessage!),
+            ),
+          );
         }
       },
       builder: (context, state) {
         return Container(
           padding: EdgeInsets.only(
-            left: AppSpacing.default_,
-            right: AppSpacing.default_,
-            top: AppSpacing.md,
-            bottom: AppSpacing.default_ +
+            left: isTablet ? 24 : 16,
+            right: isTablet ? 24 : 16,
+            top: isTablet ? 16 : 12,
+            bottom: (isTablet ? 24 : 16) +
                 MediaQuery.of(context).padding.bottom,
           ),
           decoration: BoxDecoration(
-            color: AppColors.surface,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.overlay.withOpacity(0.1),
-                blurRadius: 8,
-                offset: const Offset(0, -4),
+            color: isDark ? ShadcnTheme.darkCard : ShadcnTheme.card,
+            border: Border(
+              top: BorderSide(
+                color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                width: 1,
               ),
-            ],
+            ),
           ),
           child: SafeArea(
             top: false,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                // Text field
+                // Text field using ShadInput
                 Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.background,
-                      borderRadius: AppBorderRadius.inputRadius,
-                      border: Border.all(
-                        color: state.status == KomentarInputStatus.error
-                            ? AppColors.error
-                            : AppColors.border,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _textController,
-                            focusNode: _focusNode,
-                            maxLines: 5,
-                            minLines: 1,
-                            textCapitalization: TextCapitalization.sentences,
-                            decoration: InputDecoration(
-                              hintText: 'Tulis komentar...',
-                              hintStyle: AppTextStyles.body.copyWith(
-                                color: AppColors.textMuted,
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.default_,
-                                vertical: AppSpacing.md,
-                              ),
-                              border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                            ),
-                            enabled: !state.isSubmitting,
-                          ),
-                        ),
-                        // Clear button (shown when text is not empty)
-                        if (!state.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(right: AppSpacing.sm),
-                            child: IconButton(
-                              icon: const Icon(
-                                Icons.close,
-                                size: 18,
-                                color: AppColors.textMuted,
-                              ),
-                              onPressed: _clearText,
-                              splashRadius: 20,
-                            ),
-                          ),
-                      ],
-                    ),
+                  child: ShadInput(
+                    placeholder: const Text('Tulis komentar...'),
+                    controller: _textController,
+                    focusNode: _focusNode,
+                    maxLines: 5,
+                    minLines: 1,
+                    textCapitalization: TextCapitalization.sentences,
+                    enabled: !state.isSubmitting,
+                    onSubmitted: (_) => _submit(),
                   ),
                 ),
-                const SizedBox(width: AppSpacing.sm),
+                const SizedBox(width: 12),
                 // Send button
-                _buildSendButton(state),
+                _buildSendButton(state, isTablet),
               ],
             ),
           ),
@@ -191,19 +154,21 @@ class _KomentarInputViewState extends State<KomentarInputView> {
     );
   }
 
-  Widget _buildSendButton(KomentarInputState state) {
+  Widget _buildSendButton(KomentarInputState state, bool isTablet) {
     final isDisabled = !state.isValid || state.isSubmitting;
 
     return SizedBox(
-      width: 48,
-      height: 48,
+      width: isTablet ? 52 : 48,
+      height: isTablet ? 52 : 48,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
           color: isDisabled
-              ? AppColors.border
-              : AppColors.primary,
-          borderRadius: AppBorderRadius.buttonRadius,
+              ? (Theme.of(context).brightness == Brightness.dark
+                  ? ShadcnTheme.darkBorder
+                  : ShadcnTheme.border)
+              : ShadcnTheme.accent,
+          borderRadius: BorderRadius.circular(10),
         ),
         child: state.isSubmitting
             ? const Center(
@@ -212,16 +177,15 @@ class _KomentarInputViewState extends State<KomentarInputView> {
                   height: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      AppColors.white,
-                    ),
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
                 ),
               )
             : IconButton(
-                icon: const Icon(
-                  Icons.send,
-                  color: AppColors.white,
+                icon: Icon(
+                  Icons.send_rounded,
+                  color: Colors.white,
+                  size: isTablet ? 22 : 20,
                 ),
                 onPressed: isDisabled ? null : _submit,
                 splashRadius: 24,
@@ -231,7 +195,7 @@ class _KomentarInputViewState extends State<KomentarInputView> {
   }
 }
 
-/// Combined widget for komentar section (list + input)
+/// Combined widget for komentar section (list + input) - Redesigned with shadcn_ui
 class KomentarSection extends StatelessWidget {
   final String tiketId;
   final String currentUserId;
@@ -244,29 +208,53 @@ class KomentarSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width >= 600;
+
     return Column(
       children: [
-        // Header
+        // Header with gradient icon
         Container(
-          padding: const EdgeInsets.all(AppSpacing.default_),
+          padding: EdgeInsets.all(isTablet ? 24 : 16),
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
-                color: AppColors.border,
+                color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                width: 1,
               ),
             ),
           ),
           child: Row(
             children: [
-              const Icon(
-                Icons.chat_bubble,
-                color: AppColors.primary,
-                size: 20,
+              Container(
+                padding: EdgeInsets.all(isTablet ? 12 : 10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      ShadcnTheme.accent.withValues(alpha: 0.2),
+                      ShadcnTheme.accent.withValues(alpha: 0.1),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.chat_bubble_rounded,
+                  color: ShadcnTheme.accent,
+                  size: isTablet ? 24 : 20,
+                ),
               ),
-              const SizedBox(width: AppSpacing.sm),
+              SizedBox(width: isTablet ? 16 : 12),
               Text(
                 'Komentar',
-                style: AppTextStyles.title,
+                style: TextStyle(
+                  fontSize: isTablet ? 18 : 16,
+                  fontWeight: FontWeight.w600,
+                  color: ShadTheme.of(context).colorScheme.foreground,
+                  letterSpacing: -0.3,
+                ),
               ),
             ],
           ),

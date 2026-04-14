@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_border_radius.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text_styles.dart';
+import '../../core/theme/shadcn_theme.dart';
 
+/// Toast Type - Enum for different toast types
 enum ToastType {
   success,
   error,
@@ -11,7 +9,10 @@ enum ToastType {
   info,
 }
 
+/// App Toast - Redesigned with shadcn_ui theme colors
+/// A utility class for showing toast messages
 class AppToast {
+  /// Show custom toast
   static void show({
     required BuildContext context,
     required String message,
@@ -19,12 +20,54 @@ class AppToast {
     Duration duration = const Duration(seconds: 3),
   }) {
     final overlay = Overlay.of(context);
+    final isTablet = MediaQuery.of(context).size.width >= 600;
+    final (backgroundColor, icon) = _getToastConfig(type);
+
     final overlayEntry = OverlayEntry(
-      builder: (context) => _ToastWidget(
-        message: message,
-        type: type,
-        duration: duration,
-        onDismiss: () {},
+      builder: (context) => SafeArea(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: Padding(
+            padding: EdgeInsets.all(isTablet ? 16 : 12),
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isTablet ? 20 : 16,
+                  vertical: isTablet ? 16 : 12,
+                ),
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, color: Colors.white, size: isTablet ? 24 : 20),
+                    SizedBox(width: isTablet ? 12 : 8),
+                    Flexible(
+                      child: Text(
+                        message,
+                        style: TextStyle(
+                          fontSize: isTablet ? 15 : 14,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
 
@@ -35,138 +78,104 @@ class AppToast {
     });
   }
 
+  /// Show success toast
   static void success(BuildContext context, String message) {
     show(context: context, message: message, type: ToastType.success);
   }
 
+  /// Show error toast
   static void error(BuildContext context, String message) {
     show(context: context, message: message, type: ToastType.error);
   }
 
+  /// Show warning toast
   static void warning(BuildContext context, String message) {
     show(context: context, message: message, type: ToastType.warning);
   }
 
+  /// Show info toast
   static void info(BuildContext context, String message) {
     show(context: context, message: message, type: ToastType.info);
   }
-}
 
-class _ToastWidget extends StatelessWidget {
-  final String message;
-  final ToastType type;
-  final Duration duration;
-  final VoidCallback onDismiss;
-
-  const _ToastWidget({
-    required this.message,
-    required this.type,
-    required this.duration,
-    required this.onDismiss,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final (backgroundColor, iconColor, icon) = _getToastConfig();
-
-    return SafeArea(
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.default_),
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.default_,
-              ),
-              decoration: BoxDecoration(
-                color: backgroundColor,
-                borderRadius: AppBorderRadius.buttonRadius,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.overlay.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, color: iconColor, size: 20),
-                  const SizedBox(width: AppSpacing.sm),
-                  Flexible(
-                    child: Text(
-                      message,
-                      style: AppTextStyles.body.copyWith(
-                        color: iconColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  (Color, Color, IconData) _getToastConfig() {
+  static (Color, IconData) _getToastConfig(ToastType type) {
     switch (type) {
       case ToastType.success:
-        return (
-          AppColors.statusSelesai.withOpacity(0.1),
-          AppColors.statusSelesai,
-          Icons.check_circle,
-        );
+        return (ShadcnTheme.statusDone, Icons.check_circle_outline);
       case ToastType.error:
-        return (
-          AppColors.error.withOpacity(0.1),
-          AppColors.error,
-          Icons.error,
-        );
+        return (ShadcnTheme.destructive, Icons.error_outline);
       case ToastType.warning:
-        return (
-          AppColors.statusTerbuka.withOpacity(0.1),
-          AppColors.statusTerbuka,
-          Icons.warning,
-        );
+        return (ShadcnTheme.statusInProgress, Icons.warning_amber_outlined);
       case ToastType.info:
-        return (
-          AppColors.statusDiproses.withOpacity(0.1),
-          AppColors.statusDiproses,
-          Icons.info,
-        );
+        return (ShadcnTheme.accent, Icons.info_outline);
     }
   }
 }
 
+/// App Snackbar - A utility class for showing snackbars
 class AppSnackbar {
-  static void show({
-    required BuildContext context,
-    required String message,
-    ToastType type = ToastType.info,
-    String? actionLabel,
-    VoidCallback? onAction,
-  }) {
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final (backgroundColor, foregroundColor, icon) = _getSnackbarConfig(type, isDark);
+  /// Show success snackbar
+  static void success(BuildContext context, String message) {
+    _showSnackBar(
+      context,
+      message: message,
+      backgroundColor: ShadcnTheme.statusDone,
+      icon: Icons.check_circle_outline,
+    );
+  }
 
-    scaffoldMessenger.showSnackBar(
+  /// Show error snackbar
+  static void error(BuildContext context, String message) {
+    _showSnackBar(
+      context,
+      message: message,
+      backgroundColor: ShadcnTheme.destructive,
+      icon: Icons.error_outline,
+    );
+  }
+
+  /// Show warning snackbar
+  static void warning(BuildContext context, String message) {
+    _showSnackBar(
+      context,
+      message: message,
+      backgroundColor: ShadcnTheme.statusInProgress,
+      icon: Icons.warning_amber_outlined,
+    );
+  }
+
+  /// Show info snackbar
+  static void info(BuildContext context, String message) {
+    _showSnackBar(
+      context,
+      message: message,
+      backgroundColor: ShadcnTheme.accent,
+      icon: Icons.info_outline,
+    );
+  }
+
+  static void _showSnackBar(
+    BuildContext context, {
+    required String message,
+    required Color backgroundColor,
+    required IconData icon,
+  }) {
+    final isTablet = MediaQuery.of(context).size.width >= 600;
+
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            Icon(icon, color: foregroundColor, size: 20),
-            const SizedBox(width: AppSpacing.sm),
+            Icon(icon, color: Colors.white, size: isTablet ? 24 : 20),
+            SizedBox(width: isTablet ? 12 : 8),
             Expanded(
               child: Text(
                 message,
-                style: AppTextStyles.body.copyWith(color: foregroundColor),
+                style: TextStyle(
+                  fontSize: isTablet ? 15 : 14,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ],
@@ -174,62 +183,11 @@ class AppSnackbar {
         backgroundColor: backgroundColor,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
-          borderRadius: AppBorderRadius.buttonRadius,
+          borderRadius: BorderRadius.circular(10),
         ),
-        margin: const EdgeInsets.all(AppSpacing.default_),
-        action: actionLabel != null
-            ? SnackBarAction(
-                label: actionLabel,
-                textColor: foregroundColor,
-                onPressed: onAction ?? () {},
-              )
-            : null,
+        margin: EdgeInsets.all(isTablet ? 16 : 12),
+        duration: const Duration(seconds: 3),
       ),
     );
-  }
-
-  static void success(BuildContext context, String message) {
-    show(context: context, message: message, type: ToastType.success);
-  }
-
-  static void error(BuildContext context, String message) {
-    show(context: context, message: message, type: ToastType.error);
-  }
-
-  static void warning(BuildContext context, String message) {
-    show(context: context, message: message, type: ToastType.warning);
-  }
-
-  static void info(BuildContext context, String message) {
-    show(context: context, message: message, type: ToastType.info);
-  }
-
-  static (Color, Color, IconData) _getSnackbarConfig(ToastType type, bool isDark) {
-    switch (type) {
-      case ToastType.success:
-        return (
-          isDark ? AppColors.statusSelesai.withOpacity(0.2) : AppColors.statusSelesai.withOpacity(0.1),
-          AppColors.statusSelesai,
-          Icons.check_circle,
-        );
-      case ToastType.error:
-        return (
-          isDark ? AppColors.error.withOpacity(0.2) : AppColors.error.withOpacity(0.1),
-          AppColors.error,
-          Icons.error,
-        );
-      case ToastType.warning:
-        return (
-          isDark ? AppColors.statusTerbuka.withOpacity(0.2) : AppColors.statusTerbuka.withOpacity(0.1),
-          AppColors.statusTerbuka,
-          Icons.warning,
-        );
-      case ToastType.info:
-        return (
-          isDark ? AppColors.statusDiproses.withOpacity(0.2) : AppColors.statusDiproses.withOpacity(0.1),
-          AppColors.statusDiproses,
-          Icons.info,
-        );
-    }
   }
 }

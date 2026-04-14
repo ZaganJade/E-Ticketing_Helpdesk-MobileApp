@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+import '../../../core/theme/shadcn_theme.dart';
 
 class NotifikasiBadge extends StatelessWidget {
   final int count;
@@ -13,14 +14,18 @@ class NotifikasiBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width >= 600;
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
         child,
         if (count > 0)
           Positioned(
-            right: -6,
-            top: -4,
+            right: isTablet ? -10 : -8,
+            top: isTablet ? -6 : -4,
             child: TweenAnimationBuilder<double>(
               tween: Tween(begin: 0.8, end: 1.0),
               duration: const Duration(milliseconds: 300),
@@ -32,24 +37,38 @@ class NotifikasiBadge extends StatelessWidget {
                 );
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 4,
-                  vertical: 1,
+                padding: EdgeInsets.symmetric(
+                  horizontal: isTablet ? 6 : 5,
+                  vertical: isTablet ? 2 : 1,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.error,
-                  borderRadius: BorderRadius.circular(8),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      ShadcnTheme.statusOpen.withValues(alpha: 0.9),
+                      ShadcnTheme.statusOpen,
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: ShadcnTheme.statusOpen.withValues(alpha: 0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-                constraints: const BoxConstraints(
-                  minWidth: 16,
-                  minHeight: 16,
+                constraints: BoxConstraints(
+                  minWidth: isTablet ? 20 : 18,
+                  minHeight: isTablet ? 20 : 18,
                 ),
                 child: Text(
                   count > 99 ? '99+' : count.toString(),
-                  style: const TextStyle(
-                    color: AppColors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isTablet ? 12 : 11,
+                    fontWeight: FontWeight.w700,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -75,20 +94,33 @@ class NotifikasiToast extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width >= 600;
+
     return Material(
       color: Colors.transparent,
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          padding: const EdgeInsets.all(16),
+          margin: EdgeInsets.symmetric(
+            horizontal: isTablet ? 24 : 16,
+            vertical: isTablet ? 12 : 8,
+          ),
+          padding: EdgeInsets.all(isTablet ? 20 : 16),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: isDark ? ShadcnTheme.darkCard : ShadcnTheme.card,
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+              width: 1,
+            ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.overlay.withOpacity(0.1),
-                blurRadius: 8,
+                color: isDark
+                    ? Colors.black.withValues(alpha: 0.3)
+                    : ShadcnTheme.accent.withValues(alpha: 0.1),
+                blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
             ],
@@ -96,18 +128,26 @@ class NotifikasiToast extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: isTablet ? 48 : 44,
+                height: isTablet ? 48 : 44,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      ShadcnTheme.accent.withValues(alpha: 0.2),
+                      ShadcnTheme.accent.withValues(alpha: 0.1),
+                    ],
+                  ),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.notifications,
-                  color: AppColors.primary,
+                child: Icon(
+                  Icons.notifications_rounded,
+                  color: ShadcnTheme.accent,
+                  size: isTablet ? 24 : 22,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: isTablet ? 16 : 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -115,19 +155,20 @@ class NotifikasiToast extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: isTablet ? 16 : 15,
+                        color: ShadTheme.of(context).colorScheme.foreground,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: isTablet ? 6 : 4),
                     Text(
                       message,
                       style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
+                        color: ShadTheme.of(context).colorScheme.mutedForeground,
+                        fontSize: isTablet ? 14 : 13,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,

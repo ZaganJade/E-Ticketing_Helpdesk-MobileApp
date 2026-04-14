@@ -2,20 +2,16 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:share_plus/share_plus.dart';
-import '../../../core/theme/app_border_radius.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text_styles.dart';
-import '../../../shared/widgets/app_button.dart';
-import '../../../shared/widgets/app_card.dart';
-import '../../../shared/widgets/empty_state.dart';
-import '../../../shared/widgets/app_modal.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+import '../../../../core/theme/shadcn_theme.dart';
 import '../cubits/lampiran_cubit.dart';
 import '../models/lampiran_model.dart';
 import '../utils/download_helper.dart';
 import '../utils/permission_handler.dart';
 import 'lampiran_preview.dart';
 
+/// Lampiran (Attachment) List Widget - Redesigned with shadcn_ui
+/// Displays attachments in a responsive grid layout with download/preview capabilities
 class LampiranList extends StatefulWidget {
   final String tiketId;
   final bool canDelete;
@@ -52,12 +48,11 @@ class _LampiranListState extends State<LampiranList> {
 
   void _onLampiranTap(LampiranModel lampiran) {
     if (lampiran.isImage) {
-      showDialog(
+      showShadDialog(
         context: context,
         builder: (_) => LampiranPreview(lampiran: lampiran),
       );
     } else {
-      // For non-images, show download dialog
       _showDownloadDialog(lampiran);
     }
   }
@@ -69,7 +64,6 @@ class _LampiranListState extends State<LampiranList> {
     });
 
     try {
-      // Check permission first
       final hasPermission = await LampiranPermissionHandler.requestStoragePermission();
       if (!hasPermission) {
         if (mounted) {
@@ -91,8 +85,6 @@ class _LampiranListState extends State<LampiranList> {
         setState(() {
           _isDownloading[lampiran.id] = false;
         });
-
-        // Show success and option to share
         _showDownloadSuccess(lampiran, path);
       }
     } catch (e) {
@@ -100,62 +92,83 @@ class _LampiranListState extends State<LampiranList> {
         setState(() {
           _isDownloading[lampiran.id] = false;
         });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal mengunduh: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        _showErrorSnackBar('Gagal mengunduh: $e');
       }
     }
   }
 
   void _showPermissionDeniedDialog() {
-    AppModal.showConfirmation(
+    showShadDialog(
       context: context,
-      title: 'Izin Diperlukan',
-      message: 'Aplikasi memerlukan izin penyimpanan untuk mengunduh file. Buka pengaturan aplikasi?',
-      confirmText: 'Buka Pengaturan',
-    ).then((confirmed) {
-      if (confirmed == true) {
-        LampiranPermissionHandler.openAppSettings();
-      }
-    });
+      builder: (context) => ShadDialog.alert(
+        title: const Text('Izin Diperlukan'),
+        description: const Text(
+          'Aplikasi memerlukan izin penyimpanan untuk mengunduh file. Buka pengaturan aplikasi?',
+        ),
+        actions: [
+          ShadButton.outline(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ShadButton(
+            onPressed: () {
+              Navigator.pop(context);
+              LampiranPermissionHandler.openAppSettings();
+            },
+            child: const Text('Buka Pengaturan'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showDownloadDialog(LampiranModel lampiran) {
     final isDownloading = _isDownloading[lampiran.id] ?? false;
     final progress = _downloadProgress[lampiran.id] ?? 0;
 
-    showDialog(
+    showShadDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => ShadDialog.alert(
         title: Text(lampiran.namaFile),
-        content: Column(
+        description: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Ukuran: ${lampiran.formattedSize}'),
-            const SizedBox(height: AppSpacing.default_),
+            const SizedBox(height: 16),
             if (isDownloading) ...[
-              LinearProgressIndicator(value: progress),
-              const SizedBox(height: AppSpacing.xs),
-              Text('${(progress * 100).toInt()}%'),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: ShadcnTheme.muted,
+                  valueColor: const AlwaysStoppedAnimation<Color>(ShadcnTheme.accent),
+                  minHeight: 6,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${(progress * 100).toInt()}%',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: ShadTheme.of(context).colorScheme.mutedForeground,
+                ),
+              ),
             ],
           ],
         ),
         actions: [
-          TextButton(
+          ShadButton.outline(
             onPressed: () => Navigator.pop(context),
             child: const Text('Tutup'),
           ),
           if (!isDownloading)
-            AppButton(
-              label: 'Unduh',
+            ShadButton(
               onPressed: () {
                 Navigator.pop(context);
                 _downloadFile(lampiran);
               },
+              child: const Text('Unduh'),
             ),
         ],
       ),
@@ -163,101 +176,325 @@ class _LampiranListState extends State<LampiranList> {
   }
 
   void _showDownloadSuccess(LampiranModel lampiran, String path) {
-    AppModal.showInfo(
+    showShadDialog(
       context: context,
-      title: 'Download Selesai',
-      message: 'File "${lampiran.namaFile}" berhasil diunduh.',
-      buttonText: 'Bagikan',
+      builder: (context) => ShadDialog.alert(
+        title: const Text('Download Selesai'),
+        description: Text('File "${lampiran.namaFile}" berhasil diunduh.'),
+        actions: [
+          ShadButton.outline(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tutup'),
+          ),
+          ShadButton(
+            onPressed: () {
+              Navigator.pop(context);
+              if (Platform.isAndroid || Platform.isIOS) {
+                Share.shareXFiles([XFile(path)], text: lampiran.namaFile);
+              }
+            },
+            child: const Text('Bagikan'),
+          ),
+        ],
+      ),
     );
-
-    // Optionally share the file
-    if (Platform.isAndroid || Platform.isIOS) {
-      Share.shareXFiles([XFile(path)], text: lampiran.namaFile);
-    }
   }
 
   void _onDeleteLampiran(LampiranModel lampiran) {
-    AppModal.showConfirmation(
+    showShadDialog(
       context: context,
-      title: 'Hapus Lampiran',
-      message: 'Yakin ingin menghapus lampiran "${lampiran.namaFile}"?',
-      confirmText: 'Hapus',
-      confirmVariant: AppButtonVariant.destructive,
-    ).then((confirmed) {
-      if (confirmed == true) {
-        _cubit.deleteLampiran(lampiran.id, widget.tiketId);
-      }
-    });
+      builder: (context) => ShadDialog.alert(
+        title: const Text('Hapus Lampiran'),
+        description: Text('Yakin ingin menghapus lampiran "${lampiran.namaFile}"?'),
+        actions: [
+          ShadButton.outline(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ShadButton.destructive(
+            onPressed: () {
+              Navigator.pop(context);
+              _cubit.deleteLampiran(lampiran.id, widget.tiketId);
+            },
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: ShadcnTheme.destructive,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<LampiranCubit, LampiranState>(
-      bloc: _cubit,
-      builder: (context, state) {
-        if (state is LampiranLoading) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(AppSpacing.default_),
-              child: CircularProgressIndicator(),
-            ),
-          );
-        }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width >= 600;
+    final horizontalPadding = isTablet ? 24.0 : 16.0;
 
-        if (state is LampiranError) {
-          return Center(
-            child: Text(
-              'Gagal memuat lampiran',
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.error,
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: horizontalPadding),
+      child: ShadCard(
+        padding: EdgeInsets.all(isTablet ? 24 : 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(isTablet ? 12 : 10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        ShadcnTheme.accent.withValues(alpha: 0.2),
+                        ShadcnTheme.accent.withValues(alpha: 0.1),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.attach_file_rounded,
+                    color: ShadcnTheme.accent,
+                    size: isTablet ? 24 : 20,
+                  ),
+                ),
+                SizedBox(width: isTablet ? 16 : 12),
+                Text(
+                  'Lampiran',
+                  style: TextStyle(
+                    fontSize: isTablet ? 18 : 16,
+                    fontWeight: FontWeight.w600,
+                    color: ShadTheme.of(context).colorScheme.foreground,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: isTablet ? 20 : 16),
+            // Content
+            BlocBuilder<LampiranCubit, LampiranState>(
+              bloc: _cubit,
+              builder: (context, state) {
+                if (state is LampiranLoading) {
+                  return _buildSkeletonGrid(context, isDark, isTablet);
+                }
+
+                if (state is LampiranError) {
+                  return _buildErrorState(context, isTablet);
+                }
+
+                if (state is LampiranListLoaded) {
+                  if (state.lampiranList.isEmpty) {
+                    return _buildEmptyState(context, isDark, isTablet);
+                  }
+
+                  return _LampiranGrid(
+                    lampiranList: state.lampiranList,
+                    onTap: _onLampiranTap,
+                    onDelete: widget.canDelete ? _onDeleteLampiran : null,
+                    isTablet: isTablet,
+                  );
+                }
+
+                return const SizedBox.shrink();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSkeletonGrid(BuildContext context, bool isDark, bool isTablet) {
+    final crossAxisCount = isTablet ? 4 : 3;
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        crossAxisSpacing: isTablet ? 16 : 12,
+        mainAxisSpacing: isTablet ? 16 : 12,
+        childAspectRatio: 0.8,
+      ),
+      itemCount: 3,
+      itemBuilder: (context, index) => Container(
+        decoration: BoxDecoration(
+          color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+            width: 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: Container(
+                margin: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.image,
+                    color: isDark ? ShadcnTheme.darkMutedForeground : ShadcnTheme.mutedForeground,
+                    size: isTablet ? 32 : 24,
+                  ),
+                ),
               ),
             ),
-          );
-        }
+            Container(
+              padding: EdgeInsets.all(isTablet ? 12 : 8),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                  ),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    width: 40,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-        if (state is LampiranListLoaded) {
-          if (state.lampiranList.isEmpty) {
-            return EmptyState(
-              icon: Icons.attach_file,
-              title: 'Belum ada lampiran',
-              subtitle: 'File yang dilampirkan akan muncul di sini',
-            );
-          }
+  Widget _buildEmptyState(BuildContext context, bool isDark, bool isTablet) {
+    return Container(
+      padding: EdgeInsets.all(isTablet ? 40 : 32),
+      decoration: BoxDecoration(
+        color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+          width: 1,
+        ),
+      ),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(
+              Icons.attach_file_outlined,
+              size: isTablet ? 56 : 48,
+              color: isDark ? ShadcnTheme.darkMutedForeground : ShadcnTheme.mutedForeground,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Belum ada lampiran',
+              style: TextStyle(
+                fontSize: isTablet ? 16 : 14,
+                fontWeight: FontWeight.w500,
+                color: ShadTheme.of(context).colorScheme.foreground,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'File yang dilampirkan akan muncul di sini',
+              style: TextStyle(
+                fontSize: isTablet ? 14 : 12,
+                color: ShadTheme.of(context).colorScheme.mutedForeground,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-          return _LampiranGrid(
-            lampiranList: state.lampiranList,
-            onTap: _onLampiranTap,
-            onDelete: widget.canDelete ? _onDeleteLampiran : null,
-          );
-        }
-
-        return const SizedBox.shrink();
-      },
+  Widget _buildErrorState(BuildContext context, bool isTablet) {
+    return Container(
+      padding: EdgeInsets.all(isTablet ? 40 : 32),
+      decoration: BoxDecoration(
+        color: ShadcnTheme.destructive.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: ShadcnTheme.destructive.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: isTablet ? 48 : 40,
+              color: ShadcnTheme.destructive,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Gagal memuat lampiran',
+              style: TextStyle(
+                fontSize: isTablet ? 14 : 13,
+                color: ShadcnTheme.destructive,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
+/// Grid view for lampiran items
 class _LampiranGrid extends StatelessWidget {
   final List<LampiranModel> lampiranList;
   final Function(LampiranModel) onTap;
   final Function(LampiranModel)? onDelete;
+  final bool isTablet;
 
   const _LampiranGrid({
     required this.lampiranList,
     required this.onTap,
     this.onDelete,
+    required this.isTablet,
   });
 
   @override
   Widget build(BuildContext context) {
+    final crossAxisCount = isTablet ? 4 : 3;
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(AppSpacing.default_),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: AppSpacing.default_,
-        mainAxisSpacing: AppSpacing.default_,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        crossAxisSpacing: isTablet ? 16 : 12,
+        mainAxisSpacing: isTablet ? 16 : 12,
         childAspectRatio: 0.8,
       ),
       itemCount: lampiranList.length,
@@ -267,128 +504,176 @@ class _LampiranGrid extends StatelessWidget {
           lampiran: lampiran,
           onTap: () => onTap(lampiran),
           onDelete: onDelete != null ? () => onDelete!(lampiran) : null,
+          isTablet: isTablet,
         );
       },
     );
   }
 }
 
+/// Individual lampiran grid item
 class _LampiranGridItem extends StatelessWidget {
   final LampiranModel lampiran;
   final VoidCallback onTap;
   final VoidCallback? onDelete;
+  final bool isTablet;
 
   const _LampiranGridItem({
     required this.lampiran,
     required this.onTap,
     this.onDelete,
+    required this.isTablet,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fileColor = _getFileColor();
 
-    return Stack(
-      children: [
-        InkWell(
-          onTap: onTap,
-          borderRadius: AppBorderRadius.buttonRadius,
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurface : AppColors.surface,
-              borderRadius: AppBorderRadius.buttonRadius,
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Column(
-              children: [
-                Expanded(
-                  child: lampiran.isImage
-                      ? _buildImageThumbnail()
-                      : _buildFileIcon(),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: AppColors.border),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        lampiran.namaFile,
-                        style: AppTextStyles.caption,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        lampiran.formattedSize,
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.textTertiary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+            width: 1,
           ),
         ),
-        if (onDelete != null)
-          Positioned(
-            top: 4,
-            right: 4,
-            child: Material(
-              color: AppColors.error.withOpacity(0.9),
-              borderRadius: BorderRadius.circular(12),
-              child: InkWell(
-                onTap: onDelete,
-                borderRadius: BorderRadius.circular(12),
-                child: const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: Icon(
-                    Icons.close,
-                    size: 16,
-                    color: AppColors.white,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  Expanded(
+                    child: lampiran.isImage
+                        ? _buildImageThumbnail()
+                        : _buildFileIcon(fileColor),
+                  ),
+                  Container(
+                    padding: EdgeInsets.all(isTablet ? 12 : 10),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(
+                          color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                        ),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          lampiran.namaFile,
+                          style: TextStyle(
+                            fontSize: isTablet ? 13 : 12,
+                            fontWeight: FontWeight.w500,
+                            color: ShadTheme.of(context).colorScheme.foreground,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          lampiran.formattedSize,
+                          style: TextStyle(
+                            fontSize: isTablet ? 12 : 11,
+                            fontWeight: FontWeight.w400,
+                            color: ShadTheme.of(context).colorScheme.mutedForeground,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (onDelete != null)
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: GestureDetector(
+                    onTap: onDelete,
+                    child: Container(
+                      width: isTablet ? 28 : 24,
+                      height: isTablet ? 28 : 24,
+                      decoration: BoxDecoration(
+                        color: ShadcnTheme.destructive.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.close,
+                        size: isTablet ? 16 : 14,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
+            ],
           ),
-      ],
+        ),
+      ),
     );
+  }
+
+  Color _getFileColor() {
+    if (lampiran.isImage) return ShadcnTheme.accent;
+    if (lampiran.isPdf) return ShadcnTheme.statusOpen;
+    if (lampiran.isDoc) return ShadcnTheme.statusInProgress;
+    return ShadcnTheme.statusDone;
   }
 
   Widget _buildImageThumbnail() {
-    return ClipRRect(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(AppBorderRadius.buttonRadius.topLeft.x),
-      ),
-      child: Image.network(
-        lampiran.pathFile,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _buildFileIcon(),
-      ),
+    return Image.network(
+      lampiran.pathFile,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      errorBuilder: (context, error, stackTrace) => _buildFileIcon(_getFileColor()),
     );
   }
 
-  Widget _buildFileIcon() {
-    return Center(
+  Widget _buildFileIcon(Color color) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: color.withValues(alpha: 0.1),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            lampiran.iconData,
-            size: 40,
-            color: AppColors.primary.withOpacity(0.5),
+          Container(
+            padding: EdgeInsets.all(isTablet ? 16 : 12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  color.withValues(alpha: 0.3),
+                  color.withValues(alpha: 0.15),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              lampiran.iconData,
+              size: isTablet ? 32 : 24,
+              color: color,
+            ),
           ),
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: 8),
           Text(
             lampiran.tipeFile.toUpperCase(),
-            style: AppTextStyles.caption.copyWith(
-              color: AppColors.textTertiary,
+            style: TextStyle(
+              fontSize: isTablet ? 12 : 10,
+              fontWeight: FontWeight.w600,
+              color: color,
             ),
           ),
         ],
@@ -397,6 +682,7 @@ class _LampiranGridItem extends StatelessWidget {
   }
 }
 
+/// List view for lampiran items (alternative layout)
 class LampiranListView extends StatelessWidget {
   final List<LampiranModel> lampiranList;
   final Function(LampiranModel) onTap;
@@ -411,82 +697,123 @@ class LampiranListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width >= 600;
+
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: lampiranList.length,
-      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.default_),
+      separatorBuilder: (context, index) => SizedBox(height: isTablet ? 12 : 8),
       itemBuilder: (context, index) {
         final lampiran = lampiranList[index];
-        return _LampiranListItem(
-          lampiran: lampiran,
+        final fileColor = _getFileColor(lampiran);
+
+        return GestureDetector(
           onTap: () => onTap(lampiran),
-          onDelete: onDelete != null ? () => onDelete!(lampiran) : null,
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                width: 1,
+              ),
+            ),
+            child: IntrinsicHeight(
+              child: Row(
+                children: [
+                  // Left accent bar
+                  Container(
+                    width: 4,
+                    decoration: BoxDecoration(
+                      color: fileColor,
+                      borderRadius: const BorderRadius.horizontal(
+                        left: Radius.circular(12),
+                      ),
+                    ),
+                  ),
+                  // Content
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.all(isTablet ? 16 : 12),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: isTablet ? 48 : 40,
+                            height: isTablet ? 48 : 40,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  fileColor.withValues(alpha: 0.2),
+                                  fileColor.withValues(alpha: 0.1),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              lampiran.iconData,
+                              color: fileColor,
+                              size: isTablet ? 24 : 20,
+                            ),
+                          ),
+                          SizedBox(width: isTablet ? 16 : 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  lampiran.namaFile,
+                                  style: TextStyle(
+                                    fontSize: isTablet ? 15 : 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: ShadTheme.of(context).colorScheme.foreground,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${lampiran.formattedSize} • ${lampiran.tipeFile.toUpperCase()}',
+                                  style: TextStyle(
+                                    fontSize: isTablet ? 13 : 12,
+                                    fontWeight: FontWeight.w400,
+                                    color: ShadTheme.of(context).colorScheme.mutedForeground,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (onDelete != null)
+                            ShadButton.ghost(
+                              size: ShadButtonSize.sm,
+                              onPressed: () => onDelete!(lampiran),
+                              child: const Icon(
+                                Icons.delete_outline,
+                                size: 20,
+                                color: ShadcnTheme.destructive,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         );
       },
     );
   }
-}
 
-class _LampiranListItem extends StatelessWidget {
-  final LampiranModel lampiran;
-  final VoidCallback onTap;
-  final VoidCallback? onDelete;
-
-  const _LampiranListItem({
-    required this.lampiran,
-    required this.onTap,
-    this.onDelete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      onTap: onTap,
-      padding: const EdgeInsets.all(AppSpacing.default_),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
-              borderRadius: AppBorderRadius.buttonRadius,
-            ),
-            child: Icon(
-              lampiran.iconData,
-              color: AppColors.primary,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.default_),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  lampiran.namaFile,
-                  style: AppTextStyles.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  '${lampiran.formattedSize} • ${lampiran.tipeFile.toUpperCase()}',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.textTertiary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (onDelete != null)
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
-              color: AppColors.error,
-              onPressed: onDelete,
-            ),
-        ],
-      ),
-    );
+  Color _getFileColor(LampiranModel lampiran) {
+    if (lampiran.isImage) return ShadcnTheme.accent;
+    if (lampiran.isPdf) return ShadcnTheme.statusOpen;
+    if (lampiran.isDoc) return ShadcnTheme.statusInProgress;
+    return ShadcnTheme.statusDone;
   }
 }

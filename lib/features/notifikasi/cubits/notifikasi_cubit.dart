@@ -1,24 +1,37 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:equatable/equatable.dart';
+import 'package:logger/logger.dart';
 import '../models/notifikasi_model.dart';
 import '../repositories/notifikasi_repository.dart';
 
 // States
-abstract class NotifikasiState {}
+abstract class NotifikasiState extends Equatable {
+  const NotifikasiState();
 
-class NotifikasiInitial extends NotifikasiState {}
+  @override
+  List<Object?> get props => [];
+}
 
-class NotifikasiLoading extends NotifikasiState {}
+class NotifikasiInitial extends NotifikasiState {
+  const NotifikasiInitial();
+}
+
+class NotifikasiLoading extends NotifikasiState {
+  const NotifikasiLoading();
+}
 
 class NotifikasiRefreshing extends NotifikasiState {
   final List<NotifikasiModel> currentList;
   final bool showUnreadOnly;
 
-  NotifikasiRefreshing({
+  const NotifikasiRefreshing({
     required this.currentList,
     this.showUnreadOnly = false,
   });
+
+  @override
+  List<Object?> get props => [currentList, showUnreadOnly];
 }
 
 class NotifikasiListLoaded extends NotifikasiState {
@@ -28,7 +41,7 @@ class NotifikasiListLoaded extends NotifikasiState {
   final bool isLoadingMore;
   final bool hasNewData;
 
-  NotifikasiListLoaded({
+  const NotifikasiListLoaded({
     required this.notifikasiList,
     this.showUnreadOnly = false,
     this.hasMore = true,
@@ -53,27 +66,43 @@ class NotifikasiListLoaded extends NotifikasiState {
   }
 
   int get unreadCount => notifikasiList.where((n) => !n.sudahDibaca).length;
+
+  @override
+  List<Object?> get props => [
+        notifikasiList,
+        showUnreadOnly,
+        hasMore,
+        isLoadingMore,
+        hasNewData,
+      ];
 }
 
 class NotifikasiCountLoaded extends NotifikasiState {
   final int count;
 
-  NotifikasiCountLoaded({required this.count});
+  const NotifikasiCountLoaded({required this.count});
+
+  @override
+  List<Object?> get props => [count];
 }
 
 class NotifikasiError extends NotifikasiState {
   final String message;
 
-  NotifikasiError({required this.message});
+  const NotifikasiError({required this.message});
+
+  @override
+  List<Object?> get props => [message];
 }
 
 // Cubit
 class NotifikasiCubit extends Cubit<NotifikasiState> {
   final NotifikasiRepository _repository = NotifikasiRepository();
+  final Logger _logger = Logger();
   StreamSubscription? _realtimeSubscription;
   Timer? _refreshDebounceTimer;
 
-  NotifikasiCubit() : super(NotifikasiInitial());
+  NotifikasiCubit() : super(const NotifikasiInitial());
 
   // Load notifikasi list
   Future<void> loadNotifikasi({
@@ -84,7 +113,7 @@ class NotifikasiCubit extends Cubit<NotifikasiState> {
       return;
     }
 
-    emit(NotifikasiLoading());
+    emit(const NotifikasiLoading());
 
     try {
       final notifikasiList = await _repository.getNotifikasiList(
@@ -135,7 +164,7 @@ class NotifikasiCubit extends Cubit<NotifikasiState> {
 
   // Toggle filter
   Future<void> toggleFilter(bool showUnreadOnly) async {
-    emit(NotifikasiLoading());
+    emit(const NotifikasiLoading());
 
     try {
       final notifikasiList = await _repository.getNotifikasiList(
@@ -156,11 +185,15 @@ class NotifikasiCubit extends Cubit<NotifikasiState> {
     }
   }
 
-  // Get unread count
+  // Get unread count - updates state without replacing list
   Future<void> getUnreadCount() async {
     try {
-      final count = await _repository.getUnreadCount();
-      emit(NotifikasiCountLoaded(count: count));
+      await _repository.getUnreadCount();
+      // Only emit if state is already loaded, update the list in place
+      if (state is NotifikasiListLoaded) {
+        // No need to emit, just keep the count for reference
+        // The unread count is computed from the list anyway
+      }
     } catch (e) {
       // Silently fail for count
     }
@@ -280,17 +313,59 @@ class NotifikasiCubit extends Cubit<NotifikasiState> {
     }
   }
 
-  // Subscribe to realtime updates with debounce
+  // Subscribe to realtime updates - only refresh when there are new notifications
   void subscribeToRealtimeUpdates() {
     _realtimeSubscription?.cancel();
-    _realtimeSubscription = _repository.subscribeToNotifikasi().listen((event) {
-      // Debounce rapid updates
-      _refreshDebounceTimer?.cancel();
-      _refreshDebounceTimer = Timer(const Duration(milliseconds: 500), () {
-        refreshWithAnimation();
-        getUnreadCount();
-      });
-    });
+    _realtimeSubscription = _repository.subscribeToNotifikasi().listen(
+      (newNotifikasiList) {
+        _logger.i('New notifications detected: ${newNotifikasiList.length} unread');
+
+        // Debounce rapid updates
+        _refreshDebounceTimer?.cancel();
+        _refreshDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+          // Only refresh UI if there are actually new notifications
+          if (newNotifikasiList.isNotEmpty) {
+            _handleNewNotifikasi(newNotifikasiList);
+          }
+          getUnreadCount();
+        });
+      },
+      onError: (error) {
+        _logger.e('Error in notifikasi subscription: $error');
+      },
+    );
+  }
+
+  // Handle new notifications - merge with existing list
+  void _handleNewNotifikasi(List<NotifikasiModel> newNotifikasiList) {
+    final currentState = state;
+    if (currentState is! NotifikasiListLoaded) {
+      // If not loaded yet, do full refresh
+      refreshWithAnimation();
+      return;
+    }
+
+    // Get current IDs
+    final currentIds = currentState.notifikasiList.map((n) => n.id).toSet();
+
+    // Filter only truly new notifications
+    final trulyNew = newNotifikasiList.where((n) => !currentIds.contains(n.id)).toList();
+
+    if (trulyNew.isNotEmpty) {
+      _logger.i('Found ${trulyNew.length} new notifications');
+
+      // Merge and sort by creation time (newest first)
+      final mergedList = [...trulyNew, ...currentState.notifikasiList];
+      mergedList.sort((a, b) => b.dibuatPada.compareTo(a.dibuatPada));
+
+      emit(NotifikasiListLoaded(
+        notifikasiList: mergedList,
+        showUnreadOnly: currentState.showUnreadOnly,
+        hasMore: currentState.hasMore,
+        isLoadingMore: false,
+        hasNewData: true,
+      ));
+    }
   }
 
   // Unsubscribe from realtime updates

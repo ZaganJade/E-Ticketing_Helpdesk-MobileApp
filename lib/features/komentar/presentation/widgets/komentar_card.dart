@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_border_radius.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/theme/app_text_styles.dart';
+import 'package:intl/intl.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+import '../../../../core/theme/shadcn_theme.dart';
 import '../../../auth/domain/entities/pengguna.dart';
 import '../../domain/entities/komentar.dart';
 
-/// Widget for displaying a single komentar in chat-style bubble
+/// Widget for displaying a single komentar in chat-style bubble - Redesigned with shadcn_ui
 class KomentarCard extends StatelessWidget {
   final Komentar komentar;
   final bool isCurrentUser;
@@ -23,26 +22,31 @@ class KomentarCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width >= 600;
     final isStaff = komentar.isFromStaff;
+    final foregroundColor = ShadTheme.of(context).colorScheme.foreground;
+    final mutedForegroundColor = ShadTheme.of(context).colorScheme.mutedForeground;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       decoration: BoxDecoration(
-        color: isNew ? AppColors.primary.withOpacity(0.05) : Colors.transparent,
-        borderRadius: AppBorderRadius.cardRadius,
+        color: isNew
+            ? ShadcnTheme.accent.withValues(alpha: 0.05)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
       ),
-      padding: const EdgeInsets.symmetric(
-        vertical: AppSpacing.sm,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Avatar on left for staff, spacer for user
           if (isStaff) ...[
-            _buildAvatar(),
-            const SizedBox(width: AppSpacing.sm),
+            _buildAvatar(isStaff, isTablet),
+            SizedBox(width: isTablet ? 16 : 12),
           ] else
-            const SizedBox(width: 48),
+            SizedBox(width: isTablet ? 48 : 40),
 
           // Message content
           Expanded(
@@ -51,19 +55,19 @@ class KomentarCard extends StatelessWidget {
                   isStaff ? CrossAxisAlignment.start : CrossAxisAlignment.end,
               children: [
                 // Author info row
-                _buildAuthorInfo(isStaff),
-                const SizedBox(height: AppSpacing.xs),
+                _buildAuthorInfo(isStaff, isTablet, foregroundColor),
+                const SizedBox(height: 4),
 
                 // Message bubble
-                _buildBubble(isStaff),
+                _buildBubble(isStaff, isDark, isTablet, foregroundColor),
 
                 // Timestamp below bubble
-                const SizedBox(height: AppSpacing.xs),
-                _buildTimestamp(isStaff),
+                const SizedBox(height: 4),
+                _buildTimestamp(isStaff, isTablet, mutedForegroundColor, context),
 
                 // New indicator
                 if (isNew) ...[
-                  const SizedBox(height: AppSpacing.xs),
+                  const SizedBox(height: 4),
                   _buildNewIndicator(),
                 ],
               ],
@@ -72,74 +76,82 @@ class KomentarCard extends StatelessWidget {
 
           // Spacer for staff, avatar on right for user
           if (!isStaff) ...[
-            const SizedBox(width: AppSpacing.sm),
-            _buildAvatar(),
+            SizedBox(width: isTablet ? 16 : 12),
+            _buildAvatar(isStaff, isTablet),
           ] else
-            const SizedBox(width: 48),
+            SizedBox(width: isTablet ? 48 : 40),
         ],
       ),
     );
   }
 
-  Widget _buildAvatar() {
+  Widget _buildAvatar(bool isStaff, bool isTablet) {
     final initials = _getInitials(komentar.namaPenulis);
-    final isStaff = komentar.isFromStaff;
+    final avatarColor = isStaff ? ShadcnTheme.accent : ShadcnTheme.statusInProgress;
 
     return Container(
-      width: 36,
-      height: 36,
+      width: isTablet ? 40 : 36,
+      height: isTablet ? 40 : 36,
       decoration: BoxDecoration(
-        color: isStaff ? AppColors.primary : AppColors.secondary,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            avatarColor.withValues(alpha: 0.8),
+            avatarColor,
+          ],
+        ),
         shape: BoxShape.circle,
       ),
       child: Center(
         child: Text(
           initials,
-          style: AppTextStyles.buttonSmall.copyWith(
-            color: AppColors.white,
+          style: TextStyle(
+            fontSize: isTablet ? 14 : 12,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildAuthorInfo(bool isStaff) {
+  Widget _buildAuthorInfo(bool isStaff, bool isTablet, Color foregroundColor) {
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: AppSpacing.xs,
+      spacing: 8,
       children: [
         // Name
         Text(
           komentar.namaPenulis,
-          style: AppTextStyles.label.copyWith(
+          style: TextStyle(
+            fontSize: isTablet ? 14 : 13,
             fontWeight: FontWeight.w600,
+            color: foregroundColor,
           ),
         ),
         // Role badge
-        _buildRoleBadge(),
+        _buildRoleBadge(isTablet),
       ],
     );
   }
 
-  Widget _buildRoleBadge() {
+  Widget _buildRoleBadge(bool isTablet) {
     final (label, color) = _getRoleConfig();
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 8,
-        vertical: 2,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         label,
-        style: AppTextStyles.caption.copyWith(
+        style: TextStyle(
+          fontSize: isTablet ? 11 : 10,
           color: color,
           fontWeight: FontWeight.w600,
-          fontSize: 10,
         ),
       ),
     );
@@ -148,32 +160,32 @@ class KomentarCard extends StatelessWidget {
   (String, Color) _getRoleConfig() {
     switch (komentar.peranPenulis) {
       case Peran.admin:
-        return ('Admin', AppColors.error);
+        return ('Admin', ShadcnTheme.statusOpen);
       case Peran.helpdesk:
-        return ('Helpdesk', AppColors.primary);
+        return ('Helpdesk', ShadcnTheme.accent);
       case Peran.pengguna:
-        return ('Pengguna', AppColors.secondary);
+        return ('Pengguna', ShadcnTheme.statusDone);
     }
   }
 
-  Widget _buildBubble(bool isStaff) {
+  Widget _buildBubble(bool isStaff, bool isDark, bool isTablet, Color foregroundColor) {
     final bubbleColor = isStaff
-        ? AppColors.surface
-        : AppColors.primary;
+        ? (isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted)
+        : ShadcnTheme.accent;
     final textColor = isStaff
-        ? AppColors.textPrimary
-        : AppColors.white;
+        ? foregroundColor
+        : Colors.white;
     final borderColor = isStaff
-        ? AppColors.border
-        : AppColors.primary;
+        ? (isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border)
+        : Colors.transparent;
 
     return Container(
       constraints: BoxConstraints(
-        maxWidth: 280,
+        maxWidth: isTablet ? 400 : 280,
       ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.default_,
-        vertical: AppSpacing.md,
+      padding: EdgeInsets.symmetric(
+        horizontal: isTablet ? 16 : 12,
+        vertical: isTablet ? 12 : 10,
       ),
       decoration: BoxDecoration(
         color: bubbleColor,
@@ -190,42 +202,37 @@ class KomentarCard extends StatelessWidget {
       ),
       child: Text(
         komentar.isiPesan,
-        style: AppTextStyles.body.copyWith(
+        style: TextStyle(
+          fontSize: isTablet ? 15 : 14,
           color: textColor,
         ),
       ),
     );
   }
 
-  Widget _buildTimestamp(bool isStaff) {
+  Widget _buildTimestamp(bool isStaff, bool isTablet, Color mutedForegroundColor, BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           _formatRelativeTime(komentar.dibuatPada),
-          style: AppTextStyles.caption.copyWith(
-            color: AppColors.textTertiary,
-            fontSize: 11,
+          style: TextStyle(
+            fontSize: isTablet ? 12 : 11,
+            color: mutedForegroundColor,
           ),
         ),
         // Reply button
         if (onReply != null) ...[
-          const SizedBox(width: AppSpacing.sm),
-          InkWell(
-            onTap: onReply,
-            borderRadius: BorderRadius.circular(4),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 4,
-                vertical: 2,
-              ),
-              child: Text(
-                'Balas',
-                style: AppTextStyles.caption.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 11,
-                ),
+          const SizedBox(width: 8),
+          ShadButton.ghost(
+            size: ShadButtonSize.sm,
+            onPressed: onReply,
+            child: Text(
+              'Balas',
+              style: TextStyle(
+                fontSize: isTablet ? 12 : 11,
+                color: ShadcnTheme.accent,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -236,12 +243,9 @@ class KomentarCard extends StatelessWidget {
 
   Widget _buildNewIndicator() {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.1),
+        color: ShadcnTheme.accent.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -250,16 +254,17 @@ class KomentarCard extends StatelessWidget {
           Container(
             width: 6,
             height: 6,
-            decoration: const BoxDecoration(
-              color: AppColors.primary,
+            decoration: BoxDecoration(
+              color: ShadcnTheme.accent,
               shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: AppSpacing.xs),
+          const SizedBox(width: 6),
           Text(
             'Komentar baru',
-            style: AppTextStyles.caption.copyWith(
-              color: AppColors.primary,
+            style: TextStyle(
+              fontSize: 11,
+              color: ShadcnTheme.accent,
               fontWeight: FontWeight.w600,
             ),
           ),

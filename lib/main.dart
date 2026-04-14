@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import 'core/di/injection.dart';
 import 'core/router/app_router.dart';
 import 'core/services/supabase_service.dart';
+import 'core/theme/shadcn_theme.dart';
+import 'core/theme/theme_cubit.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/auth.dart';
 
@@ -32,14 +35,27 @@ class MyApp extends StatelessWidget {
         BlocProvider<AuthCubit>(
           create: (context) => getIt<AuthCubit>(),
         ),
+        BlocProvider<ThemeCubit>(
+          create: (context) => getIt<ThemeCubit>(),
+        ),
       ],
-      child: MaterialApp.router(
-        title: 'E-Ticketing Helpdesk',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
-        routerConfig: AppRouter.router,
+      child: BlocBuilder<ThemeCubit, ThemeState>(
+        builder: (context, themeState) {
+          return MaterialApp.router(
+            title: 'E-Ticketing Helpdesk',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeState.themeMode,
+            routerConfig: AppRouter.router,
+            builder: (context, child) {
+              return ShadTheme(
+                data: ShadcnTheme.themeData(context),
+                child: child!,
+              );
+            },
+          );
+        },
       ),
     );
   }

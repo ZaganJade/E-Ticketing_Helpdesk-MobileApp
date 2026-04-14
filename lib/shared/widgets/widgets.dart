@@ -1,3 +1,6 @@
+// Barrel file for shared widgets
+// All shared widgets are exported from this file for easy importing
+
 // Buttons
 export 'app_button.dart';
 
@@ -14,11 +17,15 @@ export 'status_badge.dart';
 // App Bar
 export 'app_appbar.dart';
 
+// Navbar
+export 'app_navbar.dart';
+
 // Scaffold
 export 'app_scaffold.dart';
 
 // Modal & Dialog
 export 'app_modal.dart';
+export 'unsaved_changes_dialog.dart';
 
 // Toast & Snackbar
 export 'app_toast.dart';

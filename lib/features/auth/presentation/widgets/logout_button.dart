@@ -25,7 +25,7 @@ class LogoutButton extends StatelessWidget {
       message: 'Yakin ingin keluar dari aplikasi?',
       confirmText: 'Ya, Keluar',
       cancelText: 'Batal',
-      confirmVariant: AppButtonVariant.destructive,
+      isDestructive: true,
     );
 
     if (confirmed == true && context.mounted) {
@@ -57,7 +57,7 @@ class LogoutIconButton extends StatelessWidget {
       message: 'Yakin ingin keluar dari aplikasi?',
       confirmText: 'Ya, Keluar',
       cancelText: 'Batal',
-      confirmVariant: AppButtonVariant.destructive,
+      isDestructive: true,
     );
 
     if (confirmed == true && context.mounted) {

@@ -1,18 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import '../../../../core/di/injection.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/theme/app_text_styles.dart';
-import '../../../../shared/widgets/app_button.dart';
-import '../../../../shared/widgets/app_input.dart';
-import '../../../../shared/widgets/app_toast.dart';
+import '../../../../core/theme/shadcn_theme.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../cubit/auth_cubit.dart';
 import '../cubit/register_cubit.dart';
 
-/// Register page with nama, email, password form
+/// Register page with nama, email, password form - Redesigned with shadcn_ui
 class RegisterPage extends StatelessWidget {
   const RegisterPage({super.key});
 
@@ -50,32 +46,41 @@ class _RegisterViewState extends State<RegisterView> {
 
   void _onRegisterStateChanged(BuildContext context, RegisterState state) {
     if (state.isSuccess && state.user != null) {
-      // Show success toast
-      AppToast.success(context, 'Akun berhasil dibuat!');
-      // Update auth cubit and navigate
+      ShadToaster.of(context).show(
+        ShadToast(
+          title: const Text('Berhasil!'),
+          description: const Text('Akun berhasil dibuat!'),
+        ),
+      );
       context.read<AuthCubit>().updateUser(state.user!);
       context.go('/dashboard');
     } else if (state.isError && state.errorMessage != null) {
-      // Show error toast
-      AppToast.error(context, state.errorMessage!);
+      ShadToaster.of(context).show(
+        ShadToast.destructive(
+          title: const Text('Registrasi Gagal'),
+          description: Text(state.errorMessage!),
+        ),
+      );
     }
   }
 
-  Widget _buildPasswordStrengthIndicator(RegisterState state) {
+  Widget _buildPasswordStrengthIndicator(RegisterState state, bool isTablet) {
     if (state.password.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: AppSpacing.xs),
+        const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
                   value: state.passwordStrength,
-                  backgroundColor: AppColors.border,
+                  backgroundColor: isTablet
+                      ? ShadcnTheme.darkBorder
+                      : ShadcnTheme.border,
                   valueColor: AlwaysStoppedAnimation<Color>(
                     Color(state.passwordStrengthColor),
                   ),
@@ -83,10 +88,11 @@ class _RegisterViewState extends State<RegisterView> {
                 ),
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
+            const SizedBox(width: 12),
             Text(
               state.passwordStrengthLabel,
-              style: AppTextStyles.caption.copyWith(
+              style: TextStyle(
+                fontSize: isTablet ? 13 : 12,
                 color: Color(state.passwordStrengthColor),
                 fontWeight: FontWeight.w500,
               ),
@@ -99,14 +105,20 @@ class _RegisterViewState extends State<RegisterView> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width >= 600;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: ShadTheme.of(context).colorScheme.background,
       appBar: AppBar(
-        backgroundColor: AppColors.transparent,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
+          icon: Icon(
+            Icons.arrow_back_rounded,
+            color: ShadTheme.of(context).colorScheme.foreground,
+          ),
         ),
       ),
       body: BlocConsumer<RegisterCubit, RegisterState>(
@@ -114,136 +126,227 @@ class _RegisterViewState extends State<RegisterView> {
         builder: (context, state) {
           return SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+              padding: EdgeInsets.all(isTablet ? 24 : 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Title
-                  Text(
-                    'Buat Akun Baru',
-                    style: AppTextStyles.headline,
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    'Isi data di bawah untuk mendaftar',
-                    style: AppTextStyles.subtitle,
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  // Nama Input
-                  AppInput(
-                    label: 'Nama Lengkap',
-                    hint: 'Masukkan nama lengkap Anda',
-                    controller: _namaController,
-                    type: AppInputType.text,
-                    isRequired: true,
-                    onChanged: (value) {
-                      context.read<RegisterCubit>().namaChanged(value);
-                    },
-                    textInputAction: TextInputAction.next,
-                    enabled: !state.isLoading,
-                  ),
-                  if (state.nama.isNotEmpty && !state.isNamaValid) ...[
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'Nama minimal 2 karakter',
-                      style: AppTextStyles.error,
-                    ),
-                  ],
-                  const SizedBox(height: AppSpacing.lg),
-                  // Email Input
-                  AppInput(
-                    label: 'Email',
-                    hint: 'Masukkan email Anda',
-                    controller: _emailController,
-                    type: AppInputType.email,
-                    isRequired: true,
-                    onChanged: (value) {
-                      context.read<RegisterCubit>().emailChanged(value);
-                    },
-                    textInputAction: TextInputAction.next,
-                    enabled: !state.isLoading,
-                  ),
-                  if (state.email.isNotEmpty && !state.isEmailValid) ...[
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'Format email tidak valid',
-                      style: AppTextStyles.error,
-                    ),
-                  ],
-                  const SizedBox(height: AppSpacing.lg),
-                  // Password Input
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  // Header with gradient icon
+                  Row(
                     children: [
-                      AppPasswordInput(
-                        label: 'Password',
-                        hint: 'Minimal 8 karakter',
-                        controller: _passwordController,
-                        isRequired: true,
-                        onChanged: (value) {
-                          context.read<RegisterCubit>().passwordChanged(value);
-                        },
-                        enabled: !state.isLoading,
-                      ),
-                      _buildPasswordStrengthIndicator(state),
-                      if (state.password.isNotEmpty && !state.isPasswordValid) ...[
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          'Password minimal 8 karakter',
-                          style: AppTextStyles.error,
+                      Container(
+                        padding: EdgeInsets.all(isTablet ? 14 : 12),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              ShadcnTheme.accent.withValues(alpha: 0.2),
+                              ShadcnTheme.accent.withValues(alpha: 0.1),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      ],
+                        child: Icon(
+                          Icons.person_add_rounded,
+                          color: ShadcnTheme.accent,
+                          size: isTablet ? 26 : 22,
+                        ),
+                      ),
+                      SizedBox(width: isTablet ? 16 : 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Buat Akun Baru',
+                              style: TextStyle(
+                                fontSize: isTablet ? 22 : 20,
+                                fontWeight: FontWeight.w700,
+                                color: ShadTheme.of(context).colorScheme.foreground,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Isi data di bawah untuk mendaftar',
+                              style: TextStyle(
+                                fontSize: isTablet ? 15 : 14,
+                                color: ShadTheme.of(context).colorScheme.mutedForeground,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.lg),
-                  // Confirm Password Input
-                  AppPasswordInput(
-                    label: 'Konfirmasi Password',
-                    hint: 'Masukkan ulang password',
-                    controller: _confirmPasswordController,
-                    isRequired: true,
-                    onChanged: (value) {
-                      context.read<RegisterCubit>().confirmPasswordChanged(value);
-                    },
-                    enabled: !state.isLoading,
-                  ),
-                  if (state.confirmPassword.isNotEmpty &&
-                      !state.isConfirmPasswordMatch) ...[
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'Konfirmasi password tidak cocok',
-                      style: AppTextStyles.error,
+                  SizedBox(height: isTablet ? 32 : 24),
+
+                  // Registration Card
+                  ShadCard(
+                    padding: EdgeInsets.all(isTablet ? 32 : 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Nama Input
+                        ShadInput(
+                          placeholder: const Text('Nama Lengkap'),
+                          controller: _namaController,
+                          textInputAction: TextInputAction.next,
+                          onChanged: (value) => context.read<RegisterCubit>().namaChanged(value),
+                          enabled: !state.isLoading,
+                          leading: Icon(
+                            Icons.person_outline_rounded,
+                            size: isTablet ? 20 : 18,
+                            color: ShadTheme.of(context).colorScheme.mutedForeground,
+                          ),
+                        ),
+                        if (state.nama.isNotEmpty && !state.isNamaValid) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'Nama minimal 2 karakter',
+                            style: TextStyle(
+                              fontSize: isTablet ? 13 : 12,
+                              color: ShadcnTheme.statusOpen,
+                            ),
+                          ),
+                        ],
+                        SizedBox(height: isTablet ? 20 : 16),
+
+                        // Email Input
+                        ShadInput(
+                          placeholder: const Text('Email'),
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          onChanged: (value) => context.read<RegisterCubit>().emailChanged(value),
+                          enabled: !state.isLoading,
+                          leading: Icon(
+                            Icons.email_outlined,
+                            size: isTablet ? 20 : 18,
+                            color: ShadTheme.of(context).colorScheme.mutedForeground,
+                          ),
+                        ),
+                        if (state.email.isNotEmpty && !state.isEmailValid) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'Format email tidak valid',
+                            style: TextStyle(
+                              fontSize: isTablet ? 13 : 12,
+                              color: ShadcnTheme.statusOpen,
+                            ),
+                          ),
+                        ],
+                        SizedBox(height: isTablet ? 20 : 16),
+
+                        // Password Input
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ShadInput(
+                              placeholder: const Text('Password (min. 8 karakter)'),
+                              controller: _passwordController,
+                              obscureText: true,
+                              textInputAction: TextInputAction.next,
+                              onChanged: (value) => context.read<RegisterCubit>().passwordChanged(value),
+                              enabled: !state.isLoading,
+                              leading: Icon(
+                                Icons.lock_outline_rounded,
+                                size: isTablet ? 20 : 18,
+                                color: ShadTheme.of(context).colorScheme.mutedForeground,
+                              ),
+                            ),
+                            _buildPasswordStrengthIndicator(state, isTablet),
+                            if (state.password.isNotEmpty && !state.isPasswordValid) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                'Password minimal 8 karakter',
+                                style: TextStyle(
+                                  fontSize: isTablet ? 13 : 12,
+                                  color: ShadcnTheme.statusOpen,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        SizedBox(height: isTablet ? 20 : 16),
+
+                        // Confirm Password Input
+                        ShadInput(
+                          placeholder: const Text('Konfirmasi Password'),
+                          controller: _confirmPasswordController,
+                          obscureText: true,
+                          textInputAction: TextInputAction.done,
+                          onChanged: (value) => context.read<RegisterCubit>().confirmPasswordChanged(value),
+                          enabled: !state.isLoading,
+                          leading: Icon(
+                            Icons.lock_outline_rounded,
+                            size: isTablet ? 20 : 18,
+                            color: ShadTheme.of(context).colorScheme.mutedForeground,
+                          ),
+                        ),
+                        if (state.confirmPassword.isNotEmpty &&
+                            !state.isConfirmPasswordMatch) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'Konfirmasi password tidak cocok',
+                            style: TextStyle(
+                              fontSize: isTablet ? 13 : 12,
+                              color: ShadcnTheme.statusOpen,
+                            ),
+                          ),
+                        ],
+                        SizedBox(height: isTablet ? 28 : 24),
+
+                        // Register Button
+                        ShadButton(
+                          size: isTablet ? ShadButtonSize.lg : null,
+                          backgroundColor: ShadcnTheme.accent,
+                          onPressed: (!state.isFormValid || state.isLoading)
+                              ? null
+                              : () => context.read<RegisterCubit>().register(),
+                          child: state.isLoading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : Text(
+                                  'Daftar',
+                                  style: TextStyle(
+                                    fontSize: isTablet ? 16 : 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                        ),
+                      ],
                     ),
-                  ],
-                  const SizedBox(height: AppSpacing.xl),
-                  // Register Button
-                  AppButton(
-                    label: 'Daftar',
-                    size: AppButtonSize.large,
-                    isLoading: state.isLoading,
-                    isDisabled: !state.isFormValid || state.isLoading,
-                    onPressed: () {
-                      context.read<RegisterCubit>().register();
-                    },
                   ),
-                  const SizedBox(height: AppSpacing.xl),
+
+                  SizedBox(height: isTablet ? 24 : 20),
                   // Login Link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         'Sudah punya akun? ',
-                        style: AppTextStyles.body,
+                        style: TextStyle(
+                          fontSize: isTablet ? 15 : 14,
+                          color: ShadTheme.of(context).colorScheme.mutedForeground,
+                        ),
                       ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
+                      ShadButton.ghost(
+                        size: ShadButtonSize.sm,
+                        onPressed: () => Navigator.of(context).pop(),
                         child: Text(
                           'Login',
-                          style: AppTextStyles.body.copyWith(
-                            color: AppColors.primary,
+                          style: TextStyle(
+                            fontSize: isTablet ? 15 : 14,
                             fontWeight: FontWeight.w600,
+                            color: ShadcnTheme.accent,
                           ),
                         ),
                       ),

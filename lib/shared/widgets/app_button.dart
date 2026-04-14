@@ -1,23 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_border_radius.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_text_styles.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
-enum AppButtonVariant {
-  primary,
-  secondary,
-  destructive,
-  ghost,
-  outline,
-}
-
-enum AppButtonSize {
-  small,
-  medium,
-  large,
-}
-
+/// App Button - Redesigned to use shadcn_ui ShadButton
+/// A wrapper around ShadButton with additional convenience constructors
 class AppButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -44,23 +29,60 @@ class AppButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final shadSize = _getShadButtonSize();
 
-    return SizedBox(
-      width: width,
-      child: ElevatedButton(
-        onPressed: isLoading || isDisabled ? null : onPressed,
-        style: _getButtonStyle(context, isDark),
-        child: _buildContent(),
-      ),
-    );
+    Widget button;
+
+    switch (variant) {
+      case AppButtonVariant.primary:
+        button = ShadButton(
+          size: shadSize,
+          onPressed: isLoading || isDisabled ? null : onPressed,
+          child: _buildContent(),
+        );
+        break;
+      case AppButtonVariant.secondary:
+        button = ShadButton.secondary(
+          size: shadSize,
+          onPressed: isLoading || isDisabled ? null : onPressed,
+          child: _buildContent(),
+        );
+        break;
+      case AppButtonVariant.destructive:
+        button = ShadButton.destructive(
+          size: shadSize,
+          onPressed: isLoading || isDisabled ? null : onPressed,
+          child: _buildContent(),
+        );
+        break;
+      case AppButtonVariant.outline:
+        button = ShadButton.outline(
+          size: shadSize,
+          onPressed: isLoading || isDisabled ? null : onPressed,
+          child: _buildContent(),
+        );
+        break;
+      case AppButtonVariant.ghost:
+        button = ShadButton.ghost(
+          size: shadSize,
+          onPressed: isLoading || isDisabled ? null : onPressed,
+          child: _buildContent(),
+        );
+        break;
+    }
+
+    if (width != null) {
+      return SizedBox(width: width, child: button);
+    }
+
+    return button;
   }
 
   Widget _buildContent() {
     if (isLoading) {
       return const SizedBox(
-        height: 20,
-        width: 20,
+        height: 16,
+        width: 16,
         child: CircularProgressIndicator(
           strokeWidth: 2,
           valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
@@ -68,94 +90,42 @@ class AppButton extends StatelessWidget {
       );
     }
 
-    final textWidget = Text(
-      label,
-      style: _getTextStyle(),
-    );
-
     if (icon != null) {
       final iconWidget = Icon(icon, size: _getIconSize());
+      final textWidget = Text(
+        label,
+        style: TextStyle(
+          fontSize: _getFontSize(),
+          fontWeight: FontWeight.w600,
+        ),
+      );
 
       return Row(
         mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: iconRight
             ? [textWidget, const SizedBox(width: 8), iconWidget]
             : [iconWidget, const SizedBox(width: 8), textWidget],
       );
     }
 
-    return textWidget;
-  }
-
-  ButtonStyle _getButtonStyle(BuildContext context, bool isDark) {
-    final (backgroundColor, foregroundColor, borderColor) = _getColors(isDark);
-
-    return ElevatedButton.styleFrom(
-      backgroundColor: backgroundColor,
-      foregroundColor: foregroundColor,
-      disabledBackgroundColor: backgroundColor.withOpacity(0.5),
-      disabledForegroundColor: foregroundColor.withOpacity(0.5),
-      elevation: variant == AppButtonVariant.ghost ? 0 : null,
-      padding: _getPadding(),
-      shape: RoundedRectangleBorder(
-        borderRadius: AppBorderRadius.buttonRadius,
-        side: borderColor != null
-            ? BorderSide(color: borderColor)
-            : BorderSide.none,
+    return Text(
+      label,
+      style: TextStyle(
+        fontSize: _getFontSize(),
+        fontWeight: FontWeight.w600,
       ),
     );
   }
 
-  (Color, Color, Color?) _getColors(bool isDark) {
-    switch (variant) {
-      case AppButtonVariant.primary:
-        return (AppColors.primary, AppColors.white, null);
-      case AppButtonVariant.secondary:
-        return (AppColors.secondary, AppColors.white, null);
-      case AppButtonVariant.destructive:
-        return (AppColors.error, AppColors.white, null);
-      case AppButtonVariant.ghost:
-        return (
-          Colors.transparent,
-          isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-          null
-        );
-      case AppButtonVariant.outline:
-        return (
-          Colors.transparent,
-          AppColors.primary,
-          AppColors.primary,
-        );
-    }
-  }
-
-  EdgeInsets _getPadding() {
+  ShadButtonSize? _getShadButtonSize() {
     switch (size) {
       case AppButtonSize.small:
-        return const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        );
+        return ShadButtonSize.sm;
       case AppButtonSize.medium:
-        return const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md,
-        );
+        return null; // Default size
       case AppButtonSize.large:
-        return const EdgeInsets.symmetric(
-          horizontal: AppSpacing.xl,
-          vertical: AppSpacing.default_,
-        );
+        return ShadButtonSize.lg;
     }
-  }
-
-  TextStyle _getTextStyle() {
-    final baseStyle = size == AppButtonSize.small
-        ? AppTextStyles.buttonSmall
-        : AppTextStyles.button;
-
-    return baseStyle;
   }
 
   double _getIconSize() {
@@ -166,6 +136,107 @@ class AppButton extends StatelessWidget {
         return 20;
       case AppButtonSize.large:
         return 24;
+    }
+  }
+
+  double _getFontSize() {
+    switch (size) {
+      case AppButtonSize.small:
+        return 12;
+      case AppButtonSize.medium:
+        return 14;
+      case AppButtonSize.large:
+        return 16;
+    }
+  }
+}
+
+enum AppButtonVariant {
+  primary,
+  secondary,
+  destructive,
+  ghost,
+  outline,
+}
+
+enum AppButtonSize {
+  small,
+  medium,
+  large,
+}
+
+/// Icon Button - A simple icon button using shadcn_ui
+class AppIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final AppButtonVariant variant;
+  final AppButtonSize size;
+
+  const AppIconButton({
+    super.key,
+    required this.icon,
+    this.onPressed,
+    this.variant = AppButtonVariant.primary,
+    this.size = AppButtonSize.medium,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final shadSize = _getShadButtonSize();
+
+    switch (variant) {
+      case AppButtonVariant.primary:
+        return ShadButton(
+          size: shadSize,
+          onPressed: onPressed,
+          child: Icon(icon, size: _getIconSize()),
+        );
+      case AppButtonVariant.secondary:
+        return ShadButton.secondary(
+          size: shadSize,
+          onPressed: onPressed,
+          child: Icon(icon, size: _getIconSize()),
+        );
+      case AppButtonVariant.destructive:
+        return ShadButton.destructive(
+          size: shadSize,
+          onPressed: onPressed,
+          child: Icon(icon, size: _getIconSize()),
+        );
+      case AppButtonVariant.outline:
+        return ShadButton.outline(
+          size: shadSize,
+          onPressed: onPressed,
+          child: Icon(icon, size: _getIconSize()),
+        );
+      case AppButtonVariant.ghost:
+        return ShadButton.ghost(
+          size: shadSize,
+          onPressed: onPressed,
+          child: Icon(icon, size: _getIconSize()),
+        );
+    }
+  }
+
+  ShadButtonSize? _getShadButtonSize() {
+    switch (size) {
+      case AppButtonSize.small:
+        return ShadButtonSize.sm;
+      case AppButtonSize.medium:
+        return null;
+      case AppButtonSize.large:
+        return ShadButtonSize.lg;
+    }
+  }
+
+  double _getIconSize() {
+    switch (size) {
+      case AppButtonSize.small:
+        return 18;
+      case AppButtonSize.medium:
+        return 22;
+      case AppButtonSize.large:
+        return 26;
     }
   }
 }
