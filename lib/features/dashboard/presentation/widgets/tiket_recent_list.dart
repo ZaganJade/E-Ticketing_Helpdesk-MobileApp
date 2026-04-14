@@ -3,6 +3,8 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../../../core/theme/shadcn_theme.dart';
 import '../../../tiket/domain/entities/tiket.dart';
+import 'lightweight_card.dart';
+import 'responsive_layout.dart';
 
 /// Recent Tickets with modern, consistent design - Fully Responsive
 class TiketRecentList extends StatelessWidget {
@@ -22,14 +24,12 @@ class TiketRecentList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final size = MediaQuery.of(context).size;
-    final isTablet = size.width >= 600;
-    final horizontalPadding = isTablet ? 24.0 : 16.0;
+    final responsive = ResponsiveLayout.of(context);
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: horizontalPadding),
-      child: ShadCard(
-        padding: EdgeInsets.all(isTablet ? 24 : 20),
+      margin: EdgeInsets.symmetric(horizontal: responsive.horizontalPadding),
+      child: LightweightCard(
+        padding: responsive.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -40,7 +40,7 @@ class TiketRecentList extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: EdgeInsets.all(isTablet ? 12 : 10),
+                      padding: EdgeInsets.all(responsive.isTablet ? 12 : 10),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
@@ -55,14 +55,14 @@ class TiketRecentList extends StatelessWidget {
                       child: Icon(
                         Icons.history_rounded,
                         color: ShadcnTheme.accent,
-                        size: isTablet ? 24 : 20,
+                        size: responsive.isTablet ? 24 : 20,
                       ),
                     ),
-                    SizedBox(width: isTablet ? 16 : 12),
+                    SizedBox(width: responsive.isTablet ? 16 : 12),
                     Text(
                       'Tiket Terbaru',
                       style: TextStyle(
-                        fontSize: isTablet ? 18 : 16,
+                        fontSize: responsive.isTablet ? 18 : 16,
                         fontWeight: FontWeight.w600,
                         color: ShadTheme.of(context).colorScheme.foreground,
                         letterSpacing: -0.3,
@@ -80,7 +80,7 @@ class TiketRecentList extends StatelessWidget {
                         Text(
                           'Lihat Semua',
                           style: TextStyle(
-                            fontSize: isTablet ? 14 : 12,
+                            fontSize: responsive.isTablet ? 14 : 12,
                             fontWeight: FontWeight.w500,
                             color: ShadcnTheme.accent,
                           ),
@@ -88,7 +88,7 @@ class TiketRecentList extends StatelessWidget {
                         const SizedBox(width: 4),
                         Icon(
                           Icons.arrow_forward_rounded,
-                          size: isTablet ? 16 : 14,
+                          size: responsive.isTablet ? 16 : 14,
                           color: ShadcnTheme.accent,
                         ),
                       ],
@@ -96,27 +96,27 @@ class TiketRecentList extends StatelessWidget {
                   ),
               ],
             ),
-            SizedBox(height: isTablet ? 8 : 4),
+            SizedBox(height: responsive.isTablet ? 8 : 4),
             Text(
               '${tiketList.length} tiket baru-baru ini',
               style: TextStyle(
-                fontSize: isTablet ? 14 : 13,
+                fontSize: responsive.isTablet ? 14 : 13,
                 fontWeight: FontWeight.w400,
                 color: ShadTheme.of(context).colorScheme.mutedForeground,
               ),
             ),
-            SizedBox(height: isTablet ? 20 : 16),
+            SizedBox(height: responsive.isTablet ? 20 : 16),
             // Content
             if (isLoading)
-              _buildSkeletonList(context, isDark, isTablet)
+              _buildSkeletonList(context, isDark, responsive)
             else if (tiketList.isEmpty)
-              _buildEmptyState(context, isDark, isTablet)
+              _buildEmptyState(context, isDark, responsive)
             else
               Column(
                 children: tiketList.take(5).map((tiket) => _TicketCard(
                   tiket: tiket,
                   onTap: onTapTiket != null ? () => onTapTiket!(tiket) : null,
-                  isTablet: isTablet,
+                  responsive: responsive,
                 )).toList(),
               ),
           ],
@@ -125,9 +125,9 @@ class TiketRecentList extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, bool isDark, bool isTablet) {
+  Widget _buildEmptyState(BuildContext context, bool isDark, ResponsiveLayout responsive) {
     return Container(
-      padding: EdgeInsets.all(isTablet ? 40 : 32),
+      padding: EdgeInsets.all(responsive.isTablet ? 40 : 32),
       decoration: BoxDecoration(
         color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
         borderRadius: BorderRadius.circular(12),
@@ -141,14 +141,14 @@ class TiketRecentList extends StatelessWidget {
           children: [
             Icon(
               Icons.inbox_outlined,
-              size: isTablet ? 56 : 48,
+              size: responsive.isTablet ? 56 : 48,
               color: isDark ? ShadcnTheme.darkMutedForeground : ShadcnTheme.mutedForeground,
             ),
             const SizedBox(height: 12),
             Text(
               'Belum ada tiket',
               style: TextStyle(
-                fontSize: isTablet ? 16 : 14,
+                fontSize: responsive.isTablet ? 16 : 14,
                 fontWeight: FontWeight.w500,
                 color: ShadTheme.of(context).colorScheme.foreground,
               ),
@@ -157,7 +157,7 @@ class TiketRecentList extends StatelessWidget {
             Text(
               'Buat tiket baru untuk memulai',
               style: TextStyle(
-                fontSize: isTablet ? 14 : 12,
+                fontSize: responsive.isTablet ? 14 : 12,
                 color: ShadTheme.of(context).colorScheme.mutedForeground,
               ),
             ),
@@ -167,11 +167,11 @@ class TiketRecentList extends StatelessWidget {
     );
   }
 
-  Widget _buildSkeletonList(BuildContext context, bool isDark, bool isTablet) {
+  Widget _buildSkeletonList(BuildContext context, bool isDark, ResponsiveLayout responsive) {
     return Column(
       children: List.generate(3, (index) => Container(
         margin: const EdgeInsets.only(bottom: 8),
-        padding: EdgeInsets.all(isTablet ? 20 : 16),
+        padding: EdgeInsets.all(responsive.isTablet ? 20 : 16),
         decoration: BoxDecoration(
           color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
           borderRadius: BorderRadius.circular(12),
@@ -183,21 +183,21 @@ class TiketRecentList extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: isTablet ? 48 : 40,
-              height: isTablet ? 48 : 40,
+              width: responsive.isTablet ? 48 : 40,
+              height: responsive.isTablet ? 48 : 40,
               decoration: BoxDecoration(
                 color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            SizedBox(width: isTablet ? 16 : 12),
+            SizedBox(width: responsive.isTablet ? 16 : 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: isTablet ? 180 : 150,
-                    height: isTablet ? 18 : 16,
+                    width: responsive.isTablet ? 180 : 150,
+                    height: responsive.isTablet ? 18 : 16,
                     decoration: BoxDecoration(
                       color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
                       borderRadius: BorderRadius.circular(4),
@@ -205,8 +205,8 @@ class TiketRecentList extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Container(
-                    width: isTablet ? 120 : 100,
-                    height: isTablet ? 14 : 12,
+                    width: responsive.isTablet ? 120 : 100,
+                    height: responsive.isTablet ? 14 : 12,
                     decoration: BoxDecoration(
                       color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
                       borderRadius: BorderRadius.circular(4),
@@ -226,12 +226,12 @@ class TiketRecentList extends StatelessWidget {
 class _TicketCard extends StatelessWidget {
   final Tiket tiket;
   final void Function()? onTap;
-  final bool isTablet;
+  final ResponsiveLayout responsive;
 
   const _TicketCard({
     required this.tiket,
     this.onTap,
-    required this.isTablet,
+    required this.responsive,
   });
 
   @override
@@ -239,24 +239,29 @@ class _TicketCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final statusColor = _getStatusColor();
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
-            width: 1,
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          decoration: BoxDecoration(
+            color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+              width: 1,
+            ),
           ),
-        ),
-        child: IntrinsicHeight(
           child: Row(
             children: [
               // Left accent bar
               Container(
                 width: 4,
+                height: responsive.isTablet ? 80 : 70,
                 decoration: BoxDecoration(
                   color: statusColor,
                   borderRadius: const BorderRadius.horizontal(
@@ -267,7 +272,7 @@ class _TicketCard extends StatelessWidget {
               // Content
               Expanded(
                 child: Padding(
-                  padding: EdgeInsets.all(isTablet ? 16 : 12),
+                  padding: EdgeInsets.all(responsive.isTablet ? 16 : 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -308,12 +313,12 @@ class _TicketCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      SizedBox(height: isTablet ? 10 : 8),
+                      SizedBox(height: responsive.isTablet ? 10 : 8),
                       // Title
                       Text(
                         tiket.judul,
                         style: TextStyle(
-                          fontSize: isTablet ? 15 : 14,
+                          fontSize: responsive.isTablet ? 15 : 14,
                           fontWeight: FontWeight.w600,
                           color: ShadTheme.of(context).colorScheme.foreground,
                         ),
@@ -364,22 +369,20 @@ class TiketRecentListSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final isTablet = size.width >= 600;
-    final horizontalPadding = isTablet ? 24.0 : 16.0;
+    final responsive = ResponsiveLayout.of(context);
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: horizontalPadding),
-      child: ShadCard(
-        padding: EdgeInsets.all(isTablet ? 24 : 20),
+      margin: EdgeInsets.symmetric(horizontal: responsive.horizontalPadding),
+      child: LightweightCard(
+        padding: responsive.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Container(
-                  width: isTablet ? 44 : 40,
-                  height: isTablet ? 44 : 40,
+                  width: responsive.isTablet ? 44 : 40,
+                  height: responsive.isTablet ? 44 : 40,
                   decoration: BoxDecoration(
                     color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
                     borderRadius: BorderRadius.circular(12),
@@ -387,8 +390,8 @@ class TiketRecentListSkeleton extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Container(
-                  width: isTablet ? 140 : 120,
-                  height: isTablet ? 28 : 24,
+                  width: responsive.isTablet ? 140 : 120,
+                  height: responsive.isTablet ? 28 : 24,
                   decoration: BoxDecoration(
                     color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
                     borderRadius: BorderRadius.circular(4),
@@ -396,8 +399,8 @@ class TiketRecentListSkeleton extends StatelessWidget {
                 ),
                 const Spacer(),
                 Container(
-                  width: isTablet ? 100 : 80,
-                  height: isTablet ? 32 : 28,
+                  width: responsive.isTablet ? 100 : 80,
+                  height: responsive.isTablet ? 32 : 28,
                   decoration: BoxDecoration(
                     color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
                     borderRadius: BorderRadius.circular(6),
@@ -405,10 +408,10 @@ class TiketRecentListSkeleton extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: isTablet ? 20 : 16),
+            SizedBox(height: responsive.isTablet ? 20 : 16),
             ...List.generate(3, (index) => Container(
               margin: const EdgeInsets.only(bottom: 8),
-              padding: EdgeInsets.all(isTablet ? 20 : 16),
+              padding: EdgeInsets.all(responsive.isTablet ? 20 : 16),
               decoration: BoxDecoration(
                 color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
                 borderRadius: BorderRadius.circular(12),
@@ -420,21 +423,21 @@ class TiketRecentListSkeleton extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    width: isTablet ? 48 : 40,
-                    height: isTablet ? 48 : 40,
+                    width: responsive.isTablet ? 48 : 40,
+                    height: responsive.isTablet ? 48 : 40,
                     decoration: BoxDecoration(
                       color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  SizedBox(width: isTablet ? 16 : 12),
+                  SizedBox(width: responsive.isTablet ? 16 : 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          width: isTablet ? 180 : 150,
-                          height: isTablet ? 18 : 16,
+                          width: responsive.isTablet ? 180 : 150,
+                          height: responsive.isTablet ? 18 : 16,
                           decoration: BoxDecoration(
                             color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
                             borderRadius: BorderRadius.circular(4),
@@ -442,8 +445,8 @@ class TiketRecentListSkeleton extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Container(
-                          width: isTablet ? 120 : 100,
-                          height: isTablet ? 14 : 12,
+                          width: responsive.isTablet ? 120 : 100,
+                          height: responsive.isTablet ? 14 : 12,
                           decoration: BoxDecoration(
                             color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
                             borderRadius: BorderRadius.circular(4),
