@@ -20,6 +20,7 @@ class DashboardCubit extends Cubit<DashboardState> {
   final Logger _logger;
 
   RealtimeChannel? _tiketChannel;
+  Timer? _debounceTimer;
 
   DashboardCubit({
     required DashboardRepository dashboardRepository,
@@ -178,10 +179,13 @@ class DashboardCubit extends Cubit<DashboardState> {
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'tiket',
-          callback: (payload, [ref]) async {
+          callback: (payload, [ref]) {
             _logger.i('Realtime update received: ${payload.eventType}');
-            // Refresh dashboard on any ticket change
-            await refresh();
+            // Debounce: cancel previous timer and wait 2 seconds before refreshing
+            _debounceTimer?.cancel();
+            _debounceTimer = Timer(const Duration(seconds: 2), () {
+              refresh();
+            });
           },
         )
         .subscribe();
@@ -189,6 +193,7 @@ class DashboardCubit extends Cubit<DashboardState> {
 
   @override
   Future<void> close() {
+    _debounceTimer?.cancel();
     if (_tiketChannel != null && _supabaseClient != null) {
       _supabaseClient.removeChannel(_tiketChannel!);
     }
