@@ -4,6 +4,8 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../../../core/theme/shadcn_theme.dart';
 import '../../../auth/domain/entities/pengguna.dart';
+import 'responsive_layout.dart';
+import 'lightweight_card.dart';
 
 /// Modern greeting section with glassmorphism effect - Fully Responsive
 class GreetingSection extends StatelessWidget {
@@ -21,27 +23,24 @@ class GreetingSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final size = MediaQuery.of(context).size;
-    final isTablet = size.width >= 600;
-    final isLargePhone = size.width >= 400;
-
-    // Responsive padding based on screen size
-    final horizontalPadding = isTablet ? 24.0 : 16.0;
-    final topPadding = isTablet ? 16.0 : 8.0;
-    final cardPadding = isTablet ? 24.0 : 20.0;
+    final responsive = ResponsiveLayout.of(context);
 
     return Container(
-      margin: EdgeInsets.fromLTRB(horizontalPadding, topPadding, horizontalPadding, 8),
-      child: ShadCard(
-        padding: EdgeInsets.all(cardPadding),
+      margin: EdgeInsets.fromLTRB(
+        responsive.horizontalPadding,
+        responsive.isTablet ? 16.0 : 8.0,
+        responsive.horizontalPadding,
+        8,
+      ),
+      child: LightweightCard(
+        padding: responsive.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                // Responsive avatar
-                _buildAvatar(isDark, isTablet),
-                SizedBox(width: isTablet ? 20 : 16),
+                _buildAvatar(isDark, responsive.avatarSize),
+                SizedBox(width: responsive.isTablet ? 20 : 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,7 +48,7 @@ class GreetingSection extends StatelessWidget {
                       Text(
                         '$greeting,',
                         style: TextStyle(
-                          fontSize: isTablet ? 15 : 13,
+                          fontSize: responsive.isTablet ? 15 : 13,
                           fontWeight: FontWeight.w500,
                           color: ShadTheme.of(context).colorScheme.mutedForeground,
                           letterSpacing: 0.3,
@@ -58,8 +57,8 @@ class GreetingSection extends StatelessWidget {
                       const SizedBox(height: 2),
                       if (isLoading)
                         Container(
-                          width: isTablet ? 160 : 120,
-                          height: isTablet ? 28 : 24,
+                          width: responsive.isTablet ? 160 : 120,
+                          height: responsive.isTablet ? 28 : 24,
                           decoration: BoxDecoration(
                             color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
                             borderRadius: BorderRadius.circular(4),
@@ -69,7 +68,7 @@ class GreetingSection extends StatelessWidget {
                         Text(
                           user?.nama ?? 'Pengguna',
                           style: TextStyle(
-                            fontSize: isTablet ? 24 : (isLargePhone ? 22 : 20),
+                            fontSize: responsive.isTablet ? 24 : 20,
                             fontWeight: FontWeight.w700,
                             color: ShadTheme.of(context).colorScheme.foreground,
                             letterSpacing: -0.5,
@@ -83,8 +82,8 @@ class GreetingSection extends StatelessWidget {
                 if (user != null) _buildRoleBadge(context, user!.peran),
               ],
             ),
-            SizedBox(height: isTablet ? 20 : 16),
-            // Subtle divider with gradient
+            SizedBox(height: responsive.isTablet ? 20 : 16),
+            // Subtle divider
             Container(
               height: 1,
               decoration: BoxDecoration(
@@ -97,13 +96,12 @@ class GreetingSection extends StatelessWidget {
                 ),
               ),
             ),
-            SizedBox(height: isTablet ? 16 : 12),
-            // Quick status line
+            SizedBox(height: responsive.isTablet ? 16 : 12),
             Row(
               children: [
                 Icon(
                   Icons.workspace_premium_outlined,
-                  size: isTablet ? 16 : 14,
+                  size: responsive.isTablet ? 16 : 14,
                   color: ShadTheme.of(context).colorScheme.mutedForeground,
                 ),
                 const SizedBox(width: 6),
@@ -115,7 +113,7 @@ class GreetingSection extends StatelessWidget {
                             ? 'Akses Helpdesk'
                             : 'Akses Pengguna',
                     style: TextStyle(
-                      fontSize: isTablet ? 13 : 12,
+                      fontSize: responsive.isTablet ? 13 : 12,
                       color: ShadTheme.of(context).colorScheme.mutedForeground,
                     ),
                     maxLines: 1,
@@ -132,7 +130,7 @@ class GreetingSection extends StatelessWidget {
                       Text(
                         'Profil',
                         style: TextStyle(
-                          fontSize: isTablet ? 13 : 12,
+                          fontSize: responsive.isTablet ? 13 : 12,
                           color: ShadcnTheme.accent,
                           fontWeight: FontWeight.w500,
                         ),
@@ -140,7 +138,7 @@ class GreetingSection extends StatelessWidget {
                       const SizedBox(width: 4),
                       Icon(
                         Icons.arrow_forward_ios_rounded,
-                        size: isTablet ? 14 : 12,
+                        size: responsive.isTablet ? 14 : 12,
                         color: ShadcnTheme.accent,
                       ),
                     ],
@@ -154,9 +152,9 @@ class GreetingSection extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatar(bool isDark, bool isTablet) {
-    final size = isTablet ? 60.0 : 52.0;
+  Widget _buildAvatar(bool isDark, double size) {
     final initials = _getInitials(user?.nama ?? '');
+    final borderRadius = size >= 55 ? 16.0 : 14.0;
 
     return Container(
       width: size,
@@ -170,7 +168,7 @@ class GreetingSection extends StatelessWidget {
             ShadcnTheme.accent.withValues(alpha: 0.4),
           ],
         ),
-        borderRadius: BorderRadius.circular(isTablet ? 16 : 14),
+        borderRadius: BorderRadius.circular(borderRadius),
         boxShadow: [
           BoxShadow(
             color: ShadcnTheme.accent.withValues(alpha: 0.3),
@@ -183,7 +181,7 @@ class GreetingSection extends StatelessWidget {
         child: Text(
           initials,
           style: TextStyle(
-            fontSize: isTablet ? 22 : 18,
+            fontSize: size * 0.35,
             fontWeight: FontWeight.w700,
             color: Colors.white,
           ),
@@ -231,27 +229,30 @@ class GreetingSectionSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final isTablet = size.width >= 600;
-    final horizontalPadding = isTablet ? 24.0 : 16.0;
-    final topPadding = isTablet ? 16.0 : 8.0;
-    final avatarSize = isTablet ? 60.0 : 52.0;
+    final responsive = ResponsiveLayout.of(context);
 
     return Container(
-      margin: EdgeInsets.fromLTRB(horizontalPadding, topPadding, horizontalPadding, 8),
-      child: ShadCard(
-        padding: EdgeInsets.all(isTablet ? 24 : 20),
+      margin: EdgeInsets.fromLTRB(
+        responsive.horizontalPadding,
+        responsive.isTablet ? 16.0 : 8.0,
+        responsive.horizontalPadding,
+        8,
+      ),
+      child: LightweightCard(
+        padding: responsive.cardPadding,
         child: Row(
           children: [
             Container(
-              width: avatarSize,
-              height: avatarSize,
+              width: responsive.avatarSize,
+              height: responsive.avatarSize,
               decoration: BoxDecoration(
                 color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
-                borderRadius: BorderRadius.circular(isTablet ? 16 : 14),
+                borderRadius: BorderRadius.circular(
+                  responsive.avatarSize >= 55 ? 16 : 14,
+                ),
               ),
             ),
-            SizedBox(width: isTablet ? 20 : 16),
+            SizedBox(width: responsive.isTablet ? 20 : 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,8 +267,8 @@ class GreetingSectionSkeleton extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Container(
-                    width: isTablet ? 180 : 140,
-                    height: isTablet ? 28 : 24,
+                    width: responsive.isTablet ? 180 : 140,
+                    height: responsive.isTablet ? 28 : 24,
                     decoration: BoxDecoration(
                       color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
                       borderRadius: BorderRadius.circular(4),
