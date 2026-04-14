@@ -137,15 +137,16 @@ class _NavItemState extends State<_NavItem>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
+  bool _isPressed = false;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 150),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.92).animate(
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
   }
@@ -156,36 +157,35 @@ class _NavItemState extends State<_NavItem>
     super.dispose();
   }
 
-  void _onTapDown(TapDownDetails details) {
-    _controller.forward();
-  }
-
-  void _onTapUp(TapUpDetails details) {
-    _controller.reverse();
-  }
-
-  void _onTapCancel() {
-    _controller.reverse();
+  void _handleTap() {
+    _controller.forward().then((_) {
+      _controller.reverse();
+    });
+    widget.onTap();
   }
 
   @override
   Widget build(BuildContext context) {
     final accentColor = _getTabColor();
 
-    return GestureDetector(
-      onTap: widget.onTap,
-      onTapDown: _onTapDown,
-      onTapUp: _onTapUp,
-      onTapCancel: _onTapCancel,
-      child: AnimatedBuilder(
-        animation: _scaleAnimation,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scaleAnimation.value,
-            child: child,
-          );
-        },
-        child: Container(
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: _handleTap,
+        borderRadius: BorderRadius.circular(16),
+        splashColor: accentColor.withValues(alpha: 0.1),
+        highlightColor: accentColor.withValues(alpha: 0.05),
+        child: AnimatedBuilder(
+          animation: _scaleAnimation,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _scaleAnimation.value,
+              child: child,
+            );
+          },
+          child: Container(
           padding: EdgeInsets.symmetric(
             horizontal: widget.isTablet ? 20 : 12,
             vertical: widget.isTablet ? 12 : 8,
@@ -457,7 +457,7 @@ class _FloatingNavItemState extends State<_FloatingNavItem>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 150),
     );
   }
 
@@ -467,14 +467,25 @@ class _FloatingNavItemState extends State<_FloatingNavItem>
     super.dispose();
   }
 
+  void _handleTap() {
+    _controller.forward().then((_) {
+      _controller.reverse();
+    });
+    widget.onTap();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: widget.onTap,
-      onTapDown: (_) => _controller.forward(),
-      onTapUp: (_) => _controller.reverse(),
-      onTapCancel: _controller.reverse,
-      child: AnimatedBuilder(
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: _handleTap,
+        borderRadius: BorderRadius.circular(20),
+        splashColor: ShadcnTheme.accent.withValues(alpha: 0.1),
+        highlightColor: ShadcnTheme.accent.withValues(alpha: 0.05),
+        child: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) {
           return Transform.scale(
