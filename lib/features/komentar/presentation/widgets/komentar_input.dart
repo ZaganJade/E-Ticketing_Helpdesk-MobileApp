@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/theme/shadcn_theme.dart';
+import '../../../auth/domain/entities/pengguna.dart';
 import '../../domain/entities/komentar.dart';
 import '../../domain/repositories/komentar_repository.dart';
 import '../cubit/komentar_input_cubit.dart';
+import '../cubit/komentar_cubit.dart';
 import 'komentar_list.dart';
 
 /// Fixed bottom input widget for komentar - Redesigned with shadcn_ui
@@ -21,13 +25,16 @@ class KomentarInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
+    // Use BlocProvider.value to avoid creating a new scope
+    return BlocProvider<KomentarInputCubit>(
       create: (context) => KomentarInputCubit(
         komentarRepository: getIt<KomentarRepository>(),
       ),
-      child: KomentarInputView(
-        tiketId: tiketId,
-        onKomentarSubmitted: onKomentarSubmitted,
+      child: Builder(
+        builder: (context) => KomentarInputView(
+          tiketId: tiketId,
+          onKomentarSubmitted: onKomentarSubmitted,
+        ),
       ),
     );
   }
@@ -77,14 +84,45 @@ class _KomentarInputViewState extends State<KomentarInputView> {
   Future<void> _submit() async {
     _focusNode.unfocus();
 
-    final cubit = context.read<KomentarInputCubit>();
+    final inputCubit = context.read<KomentarInputCubit>();
 
-    if (cubit.state.isValid) {
-      final komentar = await cubit.submit(widget.tiketId);
+    if (inputCubit.state.isValid) {
+      final message = inputCubit.state.message.trim();
+      debugPrint('KomentarInput: Submitting message: $message');
 
-      if (komentar != null && mounted) {
-        _textController.clear();
-        widget.onKomentarSubmitted?.call(komentar);
+      // Clear input immediately for better UX
+      _textController.clear();
+
+      // Clear input cubit state
+      inputCubit.clearMessage();
+
+      // Call addKomentar on KomentarCubit which has optimistic update
+      // Don't await - let it run in background for instant UI feedback
+      unawaited(_addKomentar(message));
+    }
+  }
+
+  Future<void> _addKomentar(String message) async {
+    try {
+      final listCubit = context.read<KomentarCubit>();
+      debugPrint('KomentarInput: Found KomentarCubit, state: ${listCubit.state.runtimeType}');
+
+      await listCubit.addKomentar(
+        tiketId: widget.tiketId,
+        isiPesan: message,
+      );
+
+      debugPrint('KomentarInput: addKomentar completed');
+    } catch (e) {
+      debugPrint('KomentarInput: ERROR - $e');
+      // Show error to user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengirim komentar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }

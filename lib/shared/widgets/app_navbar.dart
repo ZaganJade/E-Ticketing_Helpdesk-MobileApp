@@ -310,7 +310,8 @@ class _NavItemState extends State<_NavItem>
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   Color _getTabColor() {
@@ -486,14 +487,14 @@ class _FloatingNavItemState extends State<_FloatingNavItem>
         splashColor: ShadcnTheme.accent.withValues(alpha: 0.1),
         highlightColor: ShadcnTheme.accent.withValues(alpha: 0.05),
         child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: 1.0 - (_controller.value * 0.08),
-            child: child,
-          );
-        },
-        child: Container(
+          animation: _controller,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: 1.0 - (_controller.value * 0.08),
+              child: child,
+            );
+          },
+          child: Container(
           margin: EdgeInsets.symmetric(horizontal: widget.isTablet ? 4 : 2),
           padding: EdgeInsets.symmetric(
             horizontal: widget.isSelected
@@ -569,6 +570,7 @@ class _FloatingNavItemState extends State<_FloatingNavItem>
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }

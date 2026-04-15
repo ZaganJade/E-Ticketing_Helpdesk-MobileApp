@@ -78,6 +78,10 @@ Debug SS/
 openspec/
 supabase/
 ENV_SETUP.md
+task.md
+task1.md
+AGENTS.md
+docs/
 
 # Worktrees
 worktrees/

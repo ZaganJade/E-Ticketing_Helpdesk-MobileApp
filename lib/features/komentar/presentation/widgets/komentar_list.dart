@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import '../../../../core/di/injection.dart';
 import '../../../../core/theme/shadcn_theme.dart';
 import '../../domain/entities/komentar.dart';
-import '../../domain/repositories/komentar_repository.dart';
 import '../cubit/komentar_cubit.dart';
 import 'komentar_card.dart';
 
@@ -26,6 +24,24 @@ class KomentarList extends StatefulWidget {
 
 class _KomentarListState extends State<KomentarList> {
   String? _lastKomentarId;
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Only load once to avoid reloading on every rebuild
+    if (!_initialized) {
+      _initialized = true;
+      try {
+        final cubit = context.read<KomentarCubit>();
+        debugPrint('KomentarList: Found KomentarCubit, loading komentar...');
+        cubit.loadKomentar(widget.tiketId);
+        cubit.subscribeToRealtimeUpdates(widget.tiketId);
+      } catch (e) {
+        debugPrint('KomentarList: ERROR - Could not find KomentarCubit: $e');
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,37 +49,33 @@ class _KomentarListState extends State<KomentarList> {
     final size = MediaQuery.of(context).size;
     final isTablet = size.width >= 600;
 
-    return BlocProvider(
-      create: (context) => KomentarCubit(
-        komentarRepository: getIt<KomentarRepository>(),
-      )..loadKomentar(widget.tiketId)
-        ..subscribeToRealtimeUpdates(widget.tiketId),
-      child: BlocConsumer<KomentarCubit, KomentarState>(
-        listener: (context, state) {
-          if (state is KomentarLoaded && state.komentarList.isNotEmpty) {
-            final lastKomentar = state.komentarList.last;
-            _lastKomentarId ??= lastKomentar.id;
-          }
-        },
-        builder: (context, state) {
-          if (state is KomentarLoading) {
-            return _buildLoadingSliver(isDark, isTablet);
-          }
+    return BlocConsumer<KomentarCubit, KomentarState>(
+      listener: (context, state) {
+        debugPrint('KomentarList: State changed to ${state.runtimeType}, komentar count: ${state is KomentarLoaded ? state.komentarList.length : 'N/A'}');
+        if (state is KomentarLoaded && state.komentarList.isNotEmpty) {
+          final lastKomentar = state.komentarList.last;
+          _lastKomentarId ??= lastKomentar.id;
+        }
+      },
+      builder: (context, state) {
+        debugPrint('KomentarList: Building with state ${state.runtimeType}');
+        if (state is KomentarLoading) {
+          return _buildLoadingSliver(isDark, isTablet);
+        }
 
-          if (state is KomentarError) {
-            return _buildErrorSliver(context, state.message, isTablet);
-          }
+        if (state is KomentarError) {
+          return _buildErrorSliver(context, state.message, isTablet);
+        }
 
-          if (state is KomentarLoaded) {
-            if (state.isEmpty) {
-              return _buildEmptySliver(isDark, isTablet);
-            }
-            return _buildKomentarSliverList(state, isTablet);
+        if (state is KomentarLoaded) {
+          if (state.isEmpty) {
+            return _buildEmptySliver(isDark, isTablet);
           }
+          return _buildKomentarSliverList(state, isTablet);
+        }
 
-          return const SliverToBoxAdapter(child: SizedBox.shrink());
-        },
-      ),
+        return const SliverToBoxAdapter(child: SizedBox.shrink());
+      },
     );
   }
 

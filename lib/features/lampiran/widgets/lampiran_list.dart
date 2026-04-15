@@ -24,10 +24,10 @@ class LampiranList extends StatefulWidget {
   });
 
   @override
-  State<LampiranList> createState() => _LampiranListState();
+  State<LampiranList> createState() => LampiranListState();
 }
 
-class _LampiranListState extends State<LampiranList> {
+class LampiranListState extends State<LampiranList> {
   late final LampiranCubit _cubit;
   final DownloadHelper _downloadHelper = DownloadHelper();
   final Map<String, double> _downloadProgress = {};
@@ -47,15 +47,22 @@ class _LampiranListState extends State<LampiranList> {
     super.dispose();
   }
 
+  /// Public method to refresh the lampiran list
+  void refresh() {
+    _cubit.loadLampiran(widget.tiketId);
+  }
+
   void _onLampiranTap(LampiranModel lampiran) {
-    if (lampiran.isImage) {
-      showShadDialog(
-        context: context,
-        builder: (_) => LampiranPreview(lampiran: lampiran),
-      );
-    } else {
-      _showDownloadDialog(lampiran);
-    }
+    debugPrint('Tapped lampiran: ${lampiran.namaFile}, tipeFile: ${lampiran.tipeFile}, isImage: ${lampiran.isImage}');
+    // Langsung buka preview dengan backdrop blur untuk semua jenis file
+    showDialog(
+      context: context,
+      barrierColor: Colors.transparent, // We handle background in the widget
+      builder: (_) => LampiranPreview(
+        lampiran: lampiran,
+        onDownload: () => _downloadFile(lampiran),
+      ),
+    );
   }
 
   Future<void> _downloadFile(LampiranModel lampiran) async {
@@ -123,59 +130,6 @@ class _LampiranListState extends State<LampiranList> {
     );
   }
 
-  void _showDownloadDialog(LampiranModel lampiran) {
-    final isDownloading = _isDownloading[lampiran.id] ?? false;
-    final progress = _downloadProgress[lampiran.id] ?? 0;
-
-    showShadDialog(
-      context: context,
-      builder: (context) => ShadDialog.alert(
-        title: Text(lampiran.namaFile),
-        description: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Ukuran: ${lampiran.formattedSize}'),
-            const SizedBox(height: 16),
-            if (isDownloading) ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  backgroundColor: ShadcnTheme.muted,
-                  valueColor: const AlwaysStoppedAnimation<Color>(ShadcnTheme.accent),
-                  minHeight: 6,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${(progress * 100).toInt()}%',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: ShadTheme.of(context).colorScheme.mutedForeground,
-                ),
-              ),
-            ],
-          ],
-        ),
-        actions: [
-          ShadButton.outline(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Tutup'),
-          ),
-          if (!isDownloading)
-            ShadButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _downloadFile(lampiran);
-              },
-              child: const Text('Unduh'),
-            ),
-        ],
-      ),
-    );
-  }
-
   void _showDownloadSuccess(LampiranModel lampiran, String path) {
     showShadDialog(
       context: context,
@@ -191,7 +145,12 @@ class _LampiranListState extends State<LampiranList> {
             onPressed: () {
               Navigator.pop(context);
               if (Platform.isAndroid || Platform.isIOS) {
-                Share.shareXFiles([XFile(path)], text: lampiran.namaFile);
+                SharePlus.instance.share(
+                  ShareParams(
+                    files: [XFile(path)],
+                    text: lampiran.namaFile,
+                  ),
+                );
               }
             },
             child: const Text('Bagikan'),
@@ -299,7 +258,7 @@ class _LampiranListState extends State<LampiranList> {
 
                 if (state is LampiranListLoaded) {
                   if (state.lampiranList.isEmpty) {
-                    return const EmptyState.attachments();
+                    return EmptyState.attachments();
                   }
 
                   return _LampiranGrid(
@@ -394,8 +353,6 @@ class _LampiranListState extends State<LampiranList> {
         ),
       ),
     );
-  }
-
   }
 }
 
@@ -553,19 +510,24 @@ class _LampiranGridItem extends StatelessWidget {
   }
 
   Color _getFileColor() {
-    if (lampiran.isImage) return ShadcnTheme.accent;
-    if (lampiran.isPdf) return ShadcnTheme.statusOpen;
-    if (lampiran.isDoc) return ShadcnTheme.statusInProgress;
-    return ShadcnTheme.statusDone;
+    if (lampiran.isImage) return const Color(0xFF10B981); // Green
+    if (lampiran.isPdf) return const Color(0xFFEF4444); // Red
+    if (lampiran.isDoc) return const Color(0xFF3B82F6); // Blue
+    return const Color(0xFF64748B); // Gray
   }
 
   Widget _buildImageThumbnail() {
+    debugPrint('Loading image from: ${lampiran.fullUrl}');
     return Image.network(
-      lampiran.pathFile,
+      lampiran.fullUrl,
       fit: BoxFit.cover,
       width: double.infinity,
       height: double.infinity,
-      errorBuilder: (context, error, stackTrace) => _buildFileIcon(_getFileColor()),
+      errorBuilder: (context, error, stackTrace) {
+        debugPrint('Error loading image: $error');
+        debugPrint('URL was: ${lampiran.fullUrl}');
+        return _buildFileIcon(_getFileColor());
+      },
     );
   }
 
@@ -740,9 +702,9 @@ class LampiranListView extends StatelessWidget {
   }
 
   Color _getFileColor(LampiranModel lampiran) {
-    if (lampiran.isImage) return ShadcnTheme.accent;
-    if (lampiran.isPdf) return ShadcnTheme.statusOpen;
-    if (lampiran.isDoc) return ShadcnTheme.statusInProgress;
-    return ShadcnTheme.statusDone;
+    if (lampiran.isImage) return const Color(0xFF10B981); // Green
+    if (lampiran.isPdf) return const Color(0xFFEF4444); // Red
+    if (lampiran.isDoc) return const Color(0xFF3B82F6); // Blue
+    return const Color(0xFF64748B); // Gray
   }
 }

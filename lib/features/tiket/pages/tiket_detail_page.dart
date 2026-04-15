@@ -10,7 +10,7 @@ import '../../komentar/presentation/cubit/komentar_cubit.dart';
 import '../../komentar/presentation/widgets/komentar_input.dart';
 import '../../komentar/presentation/widgets/komentar_list.dart';
 import '../../lampiran/widgets/lampiran_list.dart';
-import '../../lampiran/widgets/lampiran_upload.dart';
+import '../../lampiran/widgets/lampiran_upload_modal.dart';
 import '../cubits/tiket_cubit.dart';
 import '../models/tiket_model.dart';
 
@@ -32,6 +32,7 @@ class _TiketDetailPageState extends State<TiketDetailPage> {
   late final TiketCubit _tiketCubit;
   late final KomentarCubit _komentarCubit;
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey<LampiranListState> _lampiranListKey = GlobalKey<LampiranListState>();
 
   @override
   void initState() {
@@ -121,53 +122,24 @@ class _TiketDetailPageState extends State<TiketDetailPage> {
   }
 
   void _showUploadLampiran(String tiketId) {
-    final size = MediaQuery.of(context).size;
-    final isTablet = size.width >= 600;
-
-    showShadDialog(
+    showDialog(
       context: context,
-      builder: (context) => ShadDialog(
-        title: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(isTablet ? 12 : 10),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    ShadcnTheme.accent.withValues(alpha: 0.2),
-                    ShadcnTheme.accent.withValues(alpha: 0.1),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                Icons.cloud_upload_outlined,
-                color: ShadcnTheme.accent,
-                size: isTablet ? 24 : 20,
-              ),
+      barrierDismissible: false,
+      builder: (context) => LampiranUploadModal(
+        tiketId: tiketId,
+        onUploaded: (lampiran) {
+          Navigator.pop(context);
+          // Refresh lampiran list to show the newly uploaded file
+          _lampiranListKey.currentState?.refresh();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('File berhasil diupload'),
+              backgroundColor: ShadcnTheme.statusDone,
+              behavior: SnackBarBehavior.floating,
             ),
-            const SizedBox(width: 12),
-            const Text('Upload Lampiran'),
-          ],
-        ),
-        child: SizedBox(
-          width: isTablet ? 500 : null,
-          child: LampiranUpload(
-            tiketId: tiketId,
-            onUploaded: (lampiran) {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('File berhasil diupload'),
-                  backgroundColor: ShadcnTheme.statusDone,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-          ),
-        ),
+          );
+        },
+        onClose: () => Navigator.pop(context),
       ),
     );
   }
@@ -421,8 +393,9 @@ class _TiketDetailPageState extends State<TiketDetailPage> {
                   tiketId: widget.tiketId,
                   currentUserId: Supabase.instance.client.auth.currentUser?.id ?? '',
                 ),
+                // Small padding at bottom to prevent content being hidden behind input
                 const SliverPadding(
-                  padding: EdgeInsets.only(bottom: 100),
+                  padding: EdgeInsets.only(bottom: 8),
                 ),
               ],
             ),
@@ -858,6 +831,7 @@ class _TiketDetailPageState extends State<TiketDetailPage> {
           ),
           SizedBox(height: isTablet ? 20 : 16),
           LampiranList(
+            key: _lampiranListKey,
             tiketId: widget.tiketId,
             canDelete: tiket.isTerbuka,
           ),
