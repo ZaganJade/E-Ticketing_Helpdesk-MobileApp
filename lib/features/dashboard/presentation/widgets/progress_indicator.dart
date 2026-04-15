@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../../../core/theme/shadcn_theme.dart';
+import '../../../../shared/widgets/widgets.dart';
 import '../../domain/entities/tiket_status_stats.dart';
 
 /// Clean donut chart painter
@@ -107,7 +108,7 @@ class StatusProgressIndicator extends StatelessWidget {
     final hasData = stats.total > 0;
 
     if (isLoading) return _buildSkeleton(context, isDark, isTablet, horizontalPadding);
-    if (!hasData) return _buildEmptyState(context, isDark, isTablet, horizontalPadding);
+    if (!hasData) return const EmptyState.tickets();
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: horizontalPadding),
@@ -310,35 +311,6 @@ class StatusProgressIndicator extends StatelessWidget {
           ),
         );
       }).toList(),
-    );
-  }
-
-  Widget _buildEmptyState(BuildContext context, bool isDark, bool isTablet, double horizontalPadding) {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: horizontalPadding),
-      child: ShadCard(
-        padding: EdgeInsets.all(isTablet ? 32 : 24),
-        child: Center(
-          child: Column(
-            children: [
-              Icon(
-                Icons.pie_chart_outline_rounded,
-                size: isTablet ? 56 : 48,
-                color: isDark ? ShadcnTheme.darkMutedForeground : ShadcnTheme.mutedForeground,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Belum ada data tiket',
-                style: TextStyle(
-                  fontSize: isTablet ? 16 : 14,
-                  fontWeight: FontWeight.w500,
-                  color: ShadTheme.of(context).colorScheme.foreground,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 

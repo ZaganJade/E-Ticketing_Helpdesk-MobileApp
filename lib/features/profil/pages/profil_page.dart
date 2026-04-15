@@ -5,6 +5,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/theme/shadcn_theme.dart';
 import '../../../../core/theme/theme_cubit.dart';
+import '../../../../shared/widgets/widgets.dart';
 import '../cubits/profil_cubit.dart';
 import '../models/profil_model.dart';
 import 'edit_nama_page.dart';
@@ -198,7 +199,9 @@ class _ProfilPageState extends State<ProfilPage> {
     }
 
     if (state is ProfilError && state is! ProfilLoaded && state is! ProfilUpdated) {
-      return _buildErrorState(context, isTablet, horizontalPadding);
+      return ErrorState.server(
+        onRetry: () => _cubit.loadProfil(),
+      );
     }
 
     if (state is ProfilLoaded || state is ProfilUpdated) {
@@ -326,46 +329,6 @@ class _ProfilPageState extends State<ProfilPage> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildErrorState(BuildContext context, bool isTablet, double horizontalPadding) {
-    return Center(
-      child: Container(
-        margin: EdgeInsets.all(horizontalPadding),
-        padding: EdgeInsets.all(isTablet ? 40 : 32),
-        decoration: BoxDecoration(
-          color: ShadcnTheme.destructive.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: ShadcnTheme.destructive.withValues(alpha: 0.2),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: isTablet ? 56 : 48,
-              color: ShadcnTheme.destructive,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Gagal memuat profil',
-              style: TextStyle(
-                fontSize: isTablet ? 18 : 16,
-                fontWeight: FontWeight.w600,
-                color: ShadcnTheme.destructive,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ShadButton.outline(
-              onPressed: () => _cubit.loadProfil(),
-              child: const Text('Coba Lagi'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

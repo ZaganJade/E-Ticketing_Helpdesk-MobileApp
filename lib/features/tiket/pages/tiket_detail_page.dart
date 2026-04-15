@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/theme/shadcn_theme.dart';
 import '../../../../core/utils/role_utils.dart';
+import '../../../../shared/widgets/widgets.dart';
 import '../../komentar/presentation/cubit/komentar_cubit.dart';
 import '../../komentar/presentation/widgets/komentar_input.dart';
 import '../../komentar/presentation/widgets/komentar_list.dart';
@@ -213,7 +214,9 @@ class _TiketDetailPageState extends State<TiketDetailPage> {
             }
 
             if (state is TiketError) {
-              return _buildErrorState(isTablet);
+              return ErrorState.server(
+                onRetry: () => _tiketCubit.getTiketDetail(widget.tiketId),
+              );
             }
 
             if (state is TiketDetailLoaded) {
@@ -331,56 +334,6 @@ class _TiketDetailPageState extends State<TiketDetailPage> {
           ),
         )),
       ],
-    );
-  }
-
-  Widget _buildErrorState(bool isTablet) {
-    final horizontalPadding = isTablet ? 24.0 : 16.0;
-
-    return Center(
-      child: Container(
-        margin: EdgeInsets.all(horizontalPadding),
-        padding: EdgeInsets.all(isTablet ? 40 : 32),
-        decoration: BoxDecoration(
-          color: ShadcnTheme.destructive.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: ShadcnTheme.destructive.withValues(alpha: 0.2),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: isTablet ? 56 : 48,
-              color: ShadcnTheme.destructive,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Gagal memuat tiket',
-              style: TextStyle(
-                fontSize: isTablet ? 18 : 16,
-                fontWeight: FontWeight.w600,
-                color: ShadcnTheme.destructive,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Terjadi kesalahan saat memuat data tiket',
-              style: TextStyle(
-                fontSize: isTablet ? 14 : 13,
-                color: ShadTheme.of(context).colorScheme.mutedForeground,
-              ),
-            ),
-            SizedBox(height: isTablet ? 24 : 20),
-            ShadButton.outline(
-              onPressed: () => _tiketCubit.getTiketDetail(widget.tiketId),
-              child: const Text('Coba Lagi'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

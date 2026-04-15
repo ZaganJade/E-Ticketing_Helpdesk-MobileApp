@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../../../core/theme/shadcn_theme.dart';
+import '../../../../shared/widgets/widgets.dart';
 import '../../../tiket/domain/entities/tiket.dart';
 
 /// Tiket Terbuka section with modern, consistent design
@@ -93,7 +94,7 @@ class TiketTerbukaSection extends StatelessWidget {
             if (isLoading)
               _buildSkeletonList(context, isDark, isTablet)
             else if (tiketList.isEmpty)
-              _buildEmptyState(context, isDark, isTablet)
+              const EmptyState.tickets()
             else
               Column(
                 children: tiketList.take(5).map((tiket) => _TicketCard(
@@ -102,48 +103,6 @@ class TiketTerbukaSection extends StatelessWidget {
                   isTablet: isTablet,
                 )).toList(),
               ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(BuildContext context, bool isDark, bool isTablet) {
-    return Container(
-      padding: EdgeInsets.all(isTablet ? 40 : 32),
-      decoration: BoxDecoration(
-        color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
-          width: 1,
-        ),
-      ),
-      child: Center(
-        child: Column(
-          children: [
-            Icon(
-              Icons.inbox_outlined,
-              size: isTablet ? 56 : 48,
-              color: isDark ? ShadcnTheme.darkMutedForeground : ShadcnTheme.mutedForeground,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Tidak ada tiket terbuka',
-              style: TextStyle(
-                fontSize: isTablet ? 16 : 14,
-                fontWeight: FontWeight.w500,
-                color: ShadTheme.of(context).colorScheme.foreground,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Semua tiket telah diambil',
-              style: TextStyle(
-                fontSize: isTablet ? 14 : 12,
-                color: ShadTheme.of(context).colorScheme.mutedForeground,
-              ),
-            ),
           ],
         ),
       ),
