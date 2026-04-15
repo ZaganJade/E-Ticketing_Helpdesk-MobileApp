@@ -235,7 +235,6 @@ class _NotifikasiListPageState extends State<NotifikasiListPage>
 
     if (state is NotifikasiError) {
       return ErrorState.server(
-        message: state.message,
         onRetry: () => _cubit.refresh(),
       );
     }

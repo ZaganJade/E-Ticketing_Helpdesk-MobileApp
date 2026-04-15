@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/config/app_config.dart';
 
 class LampiranModel {
   final String id;
@@ -44,17 +45,23 @@ class LampiranModel {
   }
 
   bool get isImage {
-    final ext = tipeFile.toLowerCase();
-    return ext == 'jpg' || ext == 'jpeg' || ext == 'png' || ext == 'gif' || ext == 'webp';
+    final ext = tipeFile.toLowerCase().replaceAll('.', ''); // Remove dot if present
+    // Handle both file extensions and MIME types
+    return ext == 'jpg' || ext == 'jpeg' || ext == 'png' || ext == 'gif' || ext == 'webp' ||
+           ext.startsWith('image/');
   }
 
   bool get isPdf {
-    return tipeFile.toLowerCase() == 'pdf';
+    final ext = tipeFile.toLowerCase().replaceAll('.', '');
+    return ext == 'pdf' || tipeFile.toLowerCase() == 'application/pdf';
   }
 
   bool get isDoc {
-    final ext = tipeFile.toLowerCase();
-    return ext == 'doc' || ext == 'docx';
+    final ext = tipeFile.toLowerCase().replaceAll('.', '');
+    final mime = tipeFile.toLowerCase();
+    return ext == 'doc' || ext == 'docx' ||
+           mime.startsWith('application/msword') ||
+           mime.startsWith('application/vnd.openxmlformats-officedocument.wordprocessingml');
   }
 
   String get formattedSize {
@@ -75,7 +82,20 @@ class LampiranModel {
   }
 
   String get fullUrl {
-    // This would be constructed from Supabase Storage URL
-    return pathFile;
+    // If pathFile is already a full URL, return it as is
+    if (pathFile.startsWith('http://') || pathFile.startsWith('https://')) {
+      return pathFile;
+    }
+    // Construct Supabase Storage URL for attachments
+    // Format: https://<supabase-url>/storage/v1/object/public/<bucket>/<path>
+    final supabaseUrl = AppConfig().supabaseUrl;
+    final bucketName = 'Lampiran E-Ticket'; // Bucket name from your Supabase (with space)
+    // URL encode the bucket name to handle spaces
+    final encodedBucketName = Uri.encodeComponent(bucketName);
+    // Remove trailing slash from supabaseUrl
+    final cleanBaseUrl = supabaseUrl.endsWith('/') ? supabaseUrl.substring(0, supabaseUrl.length - 1) : supabaseUrl;
+    // Ensure pathFile doesn't start with / to avoid double slashes
+    final cleanPath = pathFile.startsWith('/') ? pathFile.substring(1) : pathFile;
+    return '$cleanBaseUrl/storage/v1/object/public/$encodedBucketName/$cleanPath';
   }
 }

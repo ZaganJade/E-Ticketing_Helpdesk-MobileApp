@@ -1,60 +1,72 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
+import 'package:device_info_plus/device_info_plus.dart';
 
 class LampiranPermissionHandler {
-  /// Request storage permission for download
-  static Future<bool> requestStoragePermission() async {
-    if (Platform.isAndroid) {
-      final sdkInt = await _getAndroidSdkInt();
-
-      if (sdkInt >= 33) {
-        // Android 13+ (API 33+)
-        // For downloads, we don't need special permissions if using app's private storage
-        // But for saving to Downloads folder:
-        if (sdkInt >= 34) {
-          // Android 14+ needs special handling
-          final photos = await ph.Permission.photos.request();
-          return photos.isGranted;
-        }
-        return true;
-      } else {
-        // Android 12 and below
-        final status = await ph.Permission.storage.request();
-        return status.isGranted;
-      }
-    } else if (Platform.isIOS) {
-      // iOS doesn't need explicit storage permission
-      return true;
-    }
-    return false;
-  }
-
   /// Request camera permission
   static Future<bool> requestCameraPermission() async {
     final status = await ph.Permission.camera.request();
     return status.isGranted;
   }
 
-  /// Request photos/gallery permission
+  /// Request photos/gallery permission for image picking
   static Future<bool> requestPhotosPermission() async {
     if (Platform.isAndroid) {
       final sdkInt = await _getAndroidSdkInt();
 
       if (sdkInt >= 33) {
-        // Android 13+ uses READ_MEDIA_IMAGES
+        // Android 13+ (API 33+): Use READ_MEDIA_IMAGES
         final photos = await ph.Permission.photos.request();
-        return photos.isGranted;
+        return photos.isGranted || photos.isLimited;
       } else {
-        // Older Android uses storage permission
+        // Android 12 and below: Use storage permission
         final storage = await ph.Permission.storage.request();
         return storage.isGranted;
       }
     } else if (Platform.isIOS) {
       final photos = await ph.Permission.photos.request();
-      return photos.isGranted;
+      return photos.isGranted || photos.isLimited;
     }
     return false;
+  }
+
+  /// Request storage permission for download
+  static Future<bool> requestStoragePermission() async {
+    if (Platform.isAndroid) {
+      final sdkInt = await _getAndroidSdkInt();
+
+      if (sdkInt >= 33) {
+        // Android 13+: Request photos permission for saving to gallery
+        final photos = await ph.Permission.photos.request();
+        if (photos.isGranted || photos.isLimited) {
+          return true;
+        }
+
+        // Try media location as fallback
+        final mediaLocation = await ph.Permission.accessMediaLocation.request();
+        return mediaLocation.isGranted;
+      } else {
+        // Android 12 and below
+        final storage = await ph.Permission.storage.request();
+        return storage.isGranted;
+      }
+    } else if (Platform.isIOS) {
+      final photos = await ph.Permission.photos.request();
+      return photos.isGranted || photos.isLimited;
+    }
+    return false;
+  }
+
+  /// Request notification permission
+  static Future<bool> requestNotificationPermission() async {
+    final status = await ph.Permission.notification.request();
+    return status.isGranted;
+  }
+
+  /// Check current permission status
+  static Future<ph.PermissionStatus> checkPermission(ph.Permission permission) async {
+    return await permission.status;
   }
 
   /// Check if permission is permanently denied
@@ -99,36 +111,55 @@ class LampiranPermissionHandler {
   /// Request all permissions needed for lampiran feature
   static Future<Map<String, bool>> requestAllPermissions() async {
     return {
-      'storage': await requestStoragePermission(),
       'camera': await requestCameraPermission(),
       'photos': await requestPhotosPermission(),
+      'storage': await requestStoragePermission(),
+      'notifications': await requestNotificationPermission(),
     };
   }
 
   /// Get Android SDK version
   static Future<int> _getAndroidSdkInt() async {
-    // This would normally use a platform channel
-    // For now, return a default value
-    return 30;
+    if (Platform.isAndroid) {
+      final deviceInfo = DeviceInfoPlugin();
+      final androidInfo = await deviceInfo.androidInfo;
+      return androidInfo.version.sdkInt;
+    }
+    return 30; // Default for non-Android
   }
 
   /// Check if we can pick files
+  /// For Android 13+ no permission needed to pick files
+  /// For older versions need storage permission
   static Future<bool> canPickFiles() async {
     if (Platform.isAndroid) {
-      final sdkInt = await _getAndroidSdkInt();
-
-      if (sdkInt >= 33) {
-        // On Android 13+, we can pick files without permission
+      // Check photos permission status
+      final photos = await ph.Permission.photos.status;
+      if (photos.isGranted || photos.isLimited) {
         return true;
       }
 
-      // On older Android, we need storage permission
+      // Check storage permission status
       final storage = await ph.Permission.storage.status;
       return storage.isGranted;
     }
 
-    // On iOS, we can pick files from gallery without permission
-    return true;
+    // iOS
+    final photos = await ph.Permission.photos.status;
+    return photos.isGranted || photos.isLimited;
+  }
+
+  /// Get permission status map for debugging
+  static Future<Map<String, String>> getPermissionStatusMap() async {
+    final Map<String, String> status = {};
+
+    status['camera'] = (await ph.Permission.camera.status).label;
+    status['photos'] = (await ph.Permission.photos.status).label;
+    status['storage'] = (await ph.Permission.storage.status).label;
+    status['notification'] = (await ph.Permission.notification.status).label;
+    status['manageExternalStorage'] = (await ph.Permission.manageExternalStorage.status).label;
+
+    return status;
   }
 }
 

@@ -100,6 +100,7 @@ Future<void> initDependencies() async {
   getIt.registerFactory<KomentarCubit>(
     () => KomentarCubit(
       komentarRepository: getIt(),
+      authRepository: getIt(),
     ),
   );
 

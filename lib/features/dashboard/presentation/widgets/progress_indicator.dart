@@ -108,7 +108,7 @@ class StatusProgressIndicator extends StatelessWidget {
     final hasData = stats.total > 0;
 
     if (isLoading) return _buildSkeleton(context, isDark, isTablet, horizontalPadding);
-    if (!hasData) return const EmptyState.tickets();
+    if (!hasData) return EmptyState.tickets();
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: horizontalPadding),

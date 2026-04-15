@@ -51,7 +51,7 @@ class MyApp extends StatelessWidget {
             builder: (context, child) {
               return ShadTheme(
                 data: ShadcnTheme.themeData(context),
-                child: child!,
+                child: ShadToaster(child: child!),
               );
             },
           );

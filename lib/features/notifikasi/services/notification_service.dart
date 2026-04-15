@@ -40,7 +40,7 @@ class NotificationService {
     );
 
     await _notificationsPlugin.initialize(
-      initSettings,
+      settings: initSettings,
       onDidReceiveNotificationResponse: _onNotificationTap,
     );
 
@@ -131,10 +131,10 @@ class NotificationService {
     );
 
     await _notificationsPlugin.show(
-      notifikasi.id.hashCode,
-      notifikasi.judul,
-      notifikasi.pesan,
-      platformDetails,
+      id: notifikasi.id.hashCode,
+      title: notifikasi.judul,
+      body: notifikasi.pesan,
+      notificationDetails: platformDetails,
       payload: jsonEncode({
         'notifikasiId': notifikasi.id,
         'referensiId': notifikasi.referensiId,

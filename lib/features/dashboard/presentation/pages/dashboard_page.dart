@@ -6,7 +6,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../../../core/di/injection.dart';
 import '../../../../core/theme/shadcn_theme.dart';
-import '../../../../shared/widgets/widgets.dart';
+import '../../../../shared/widgets/widgets.dart' hide StatCard;
 import '../../../auth/domain/entities/pengguna.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../tiket/domain/entities/tiket.dart';
@@ -117,7 +117,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
     if (state is DashboardError) {
       return ErrorState.server(
-        message: state.message,
         onRetry: _onRefresh,
       );
     }

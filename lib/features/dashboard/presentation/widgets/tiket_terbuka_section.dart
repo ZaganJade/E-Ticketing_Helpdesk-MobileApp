@@ -94,7 +94,7 @@ class TiketTerbukaSection extends StatelessWidget {
             if (isLoading)
               _buildSkeletonList(context, isDark, isTablet)
             else if (tiketList.isEmpty)
-              const EmptyState.tickets()
+              EmptyState.tickets()
             else
               Column(
                 children: tiketList.take(5).map((tiket) => _TicketCard(
