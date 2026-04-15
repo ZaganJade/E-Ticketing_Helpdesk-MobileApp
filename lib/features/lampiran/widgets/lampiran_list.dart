@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '../../../../core/theme/shadcn_theme.dart';
+import '../../../../shared/widgets/widgets.dart';
 import '../cubits/lampiran_cubit.dart';
 import '../models/lampiran_model.dart';
 import '../utils/download_helper.dart';
@@ -291,12 +292,14 @@ class _LampiranListState extends State<LampiranList> {
                 }
 
                 if (state is LampiranError) {
-                  return _buildErrorState(context, isTablet);
+                  return ErrorState.server(
+                    onRetry: () => _cubit.loadLampiran(widget.tiketId),
+                  );
                 }
 
                 if (state is LampiranListLoaded) {
                   if (state.lampiranList.isEmpty) {
-                    return _buildEmptyState(context, isDark, isTablet);
+                    return const EmptyState.attachments();
                   }
 
                   return _LampiranGrid(
@@ -393,80 +396,6 @@ class _LampiranListState extends State<LampiranList> {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, bool isDark, bool isTablet) {
-    return Container(
-      padding: EdgeInsets.all(isTablet ? 40 : 32),
-      decoration: BoxDecoration(
-        color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
-          width: 1,
-        ),
-      ),
-      child: Center(
-        child: Column(
-          children: [
-            Icon(
-              Icons.attach_file_outlined,
-              size: isTablet ? 56 : 48,
-              color: isDark ? ShadcnTheme.darkMutedForeground : ShadcnTheme.mutedForeground,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Belum ada lampiran',
-              style: TextStyle(
-                fontSize: isTablet ? 16 : 14,
-                fontWeight: FontWeight.w500,
-                color: ShadTheme.of(context).colorScheme.foreground,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'File yang dilampirkan akan muncul di sini',
-              style: TextStyle(
-                fontSize: isTablet ? 14 : 12,
-                color: ShadTheme.of(context).colorScheme.mutedForeground,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorState(BuildContext context, bool isTablet) {
-    return Container(
-      padding: EdgeInsets.all(isTablet ? 40 : 32),
-      decoration: BoxDecoration(
-        color: ShadcnTheme.destructive.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: ShadcnTheme.destructive.withValues(alpha: 0.2),
-          width: 1,
-        ),
-      ),
-      child: Center(
-        child: Column(
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: isTablet ? 48 : 40,
-              color: ShadcnTheme.destructive,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Gagal memuat lampiran',
-              style: TextStyle(
-                fontSize: isTablet ? 14 : 13,
-                color: ShadcnTheme.destructive,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 
