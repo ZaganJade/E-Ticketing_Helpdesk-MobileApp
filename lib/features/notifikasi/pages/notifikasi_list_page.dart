@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '../../../core/theme/shadcn_theme.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../cubits/notifikasi_cubit.dart';
 import '../models/notifikasi_model.dart';
 import '../widgets/notifikasi_card.dart';
@@ -233,7 +234,10 @@ class _NotifikasiListPageState extends State<NotifikasiListPage>
     }
 
     if (state is NotifikasiError) {
-      return _buildErrorState(state.message, isTablet);
+      return ErrorState.server(
+        message: state.message,
+        onRetry: () => _cubit.refresh(),
+      );
     }
 
     // Show refreshing animation with current data
@@ -389,63 +393,6 @@ class _NotifikasiListPageState extends State<NotifikasiListPage>
           ),
         );
       },
-    );
-  }
-
-  Widget _buildErrorState(String message, bool isTablet) {
-    return Center(
-      child: Container(
-        margin: EdgeInsets.all(isTablet ? 24 : 16),
-        padding: EdgeInsets.all(isTablet ? 32 : 24),
-        decoration: BoxDecoration(
-          color: ShadcnTheme.statusOpen.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: ShadcnTheme.statusOpen.withValues(alpha: 0.2),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.error_outline_rounded,
-              size: isTablet ? 56 : 48,
-              color: ShadcnTheme.statusOpen,
-            ),
-            SizedBox(height: isTablet ? 16 : 12),
-            Text(
-              'Gagal memuat notifikasi',
-              style: TextStyle(
-                fontSize: isTablet ? 18 : 16,
-                fontWeight: FontWeight.w600,
-                color: ShadTheme.of(context).colorScheme.foreground,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: TextStyle(
-                fontSize: isTablet ? 15 : 14,
-                color: ShadTheme.of(context).colorScheme.mutedForeground,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: isTablet ? 24 : 20),
-            ShadButton(
-              backgroundColor: ShadcnTheme.accent,
-              onPressed: () => _cubit.refresh(),
-              child: Text(
-                'Coba Lagi',
-                style: TextStyle(
-                  fontSize: isTablet ? 15 : 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
