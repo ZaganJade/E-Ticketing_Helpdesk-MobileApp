@@ -6,6 +6,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../../../core/di/injection.dart';
 import '../../../../core/theme/shadcn_theme.dart';
+import '../../../../shared/widgets/widgets.dart';
 import '../../../auth/domain/entities/pengguna.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../tiket/domain/entities/tiket.dart';
@@ -115,7 +116,10 @@ class _DashboardPageState extends State<DashboardPage> {
     }
 
     if (state is DashboardError) {
-      return _buildErrorState(state.message, isDark);
+      return ErrorState.server(
+        message: state.message,
+        onRetry: _onRefresh,
+      );
     }
 
     if (state is DashboardLoaded) {
@@ -167,37 +171,6 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildErrorState(String message, bool isDark) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: ShadCard(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.error_outline_rounded, size: 48, color: ShadcnTheme.destructive),
-                const SizedBox(height: 16),
-                Text('Gagal Memuat Dashboard', style: TextStyles.h4(context)),
-                const SizedBox(height: 8),
-                Text(message, style: TextStyles.muted(context), textAlign: TextAlign.center),
-                const SizedBox(height: 24),
-                ShadButton(
-                  onPressed: _onRefresh,
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [Icon(Icons.refresh_rounded, size: 16), SizedBox(width: 8), Text('Coba Lagi')],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 
