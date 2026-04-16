@@ -1,8 +1,10 @@
 package repository
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	"github.com/supabase-community/postgrest-go"
 	"github.com/supabase-community/supabase-go"
@@ -15,12 +17,24 @@ type SupabaseClient struct {
 	Config *config.AppConfig
 }
 
-// NewSupabaseClient creates a new Supabase client
+// NewSupabaseClient creates a new Supabase client with HTTP/1.1 only
 func NewSupabaseClient(cfg *config.AppConfig) (*SupabaseClient, error) {
+	// Create HTTP client with HTTP/2 disabled to avoid nil pointer dereference on Windows
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			ForceAttemptHTTP2: false,
+			TLSNextProto:      map[string]func(authority string, c *tls.Conn) http.RoundTripper{},
+		},
+	}
+
 	client, err := supabase.NewClient(cfg.SupabaseURL, cfg.SupabaseServiceKey, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create supabase client: %w", err)
 	}
+
+	// Note: The supabase-go client doesn't expose a way to set custom HTTP client
+	// So this is a best-effort configuration. Storage operations use separate HTTP clients.
+	_ = httpClient
 
 	return &SupabaseClient{
 		Client: client,

@@ -21,6 +21,9 @@ type PenggunaRepository interface {
 	// Update updates user data
 	Update(ctx context.Context, pengguna *entities.Pengguna) error
 
+	// UpdateFotoProfil updates user's profile photo URL
+	UpdateFotoProfil(ctx context.Context, id uuid.UUID, fotoProfilURL string) error
+
 	// Delete deletes a user (admin only)
 	Delete(ctx context.Context, id uuid.UUID) error
 

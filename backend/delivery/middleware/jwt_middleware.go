@@ -60,6 +60,7 @@ func (m *JWTMiddleware) RequireAuth() gin.HandlerFunc {
 		c.Set("email", pengguna.Email)
 		c.Set("nama", pengguna.Nama)
 		c.Set("peran", string(pengguna.Peran))
+		c.Set("foto_profil", pengguna.FotoProfil)
 
 		c.Next()
 	}

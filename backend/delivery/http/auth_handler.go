@@ -1,26 +1,39 @@
 package http
 
 import (
+	"bytes"
+	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"eticketinghelpdesk/entities"
 	"eticketinghelpdesk/usecases"
 )
 
 // AuthHandler handles authentication HTTP requests
 type AuthHandler struct {
-	registerUC *usecases.RegisterUseCase
-	loginUC    *usecases.LoginUseCase
-	logoutUC   *usecases.LogoutUseCase
+	registerUC           *usecases.RegisterUseCase
+	loginUC              *usecases.LoginUseCase
+	logoutUC             *usecases.LogoutUseCase
+	uploadFotoProfilUC   *usecases.UploadFotoProfilUseCase
+	deleteFotoProfilUC   *usecases.DeleteFotoProfilUseCase
 }
 
 // NewAuthHandler creates a new handler instance
-func NewAuthHandler(registerUC *usecases.RegisterUseCase, loginUC *usecases.LoginUseCase, logoutUC *usecases.LogoutUseCase) *AuthHandler {
+func NewAuthHandler(
+	registerUC *usecases.RegisterUseCase,
+	loginUC *usecases.LoginUseCase,
+	logoutUC *usecases.LogoutUseCase,
+	uploadFotoProfilUC *usecases.UploadFotoProfilUseCase,
+	deleteFotoProfilUC *usecases.DeleteFotoProfilUseCase,
+) *AuthHandler {
 	return &AuthHandler{
-		registerUC: registerUC,
-		loginUC:    loginUC,
-		logoutUC:   logoutUC,
+		registerUC:         registerUC,
+		loginUC:            loginUC,
+		logoutUC:           logoutUC,
+		uploadFotoProfilUC: uploadFotoProfilUC,
+		deleteFotoProfilUC: deleteFotoProfilUC,
 	}
 }
 
@@ -128,11 +141,89 @@ func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 	peran, _ := c.Get("peran")
 	email, _ := c.Get("email")
 	nama, _ := c.Get("nama")
+	fotoProfil, _ := c.Get("foto_profil")
 
 	c.JSON(http.StatusOK, gin.H{
-		"user_id": userID,
-		"nama":    nama,
-		"email":   email,
-		"peran":   peran,
+		"user_id":     userID,
+		"nama":        nama,
+		"email":       email,
+		"peran":       peran,
+		"foto_profil": fotoProfil,
+	})
+}
+
+// UploadFotoProfil handles profile photo upload (hanya JPG/PNG)
+func (h *AuthHandler) UploadFotoProfil(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tidak terautentikasi"})
+		return
+	}
+
+	// Parse multipart form
+	if err := c.Request.ParseMultipartForm(5 << 20); err != nil { // 5MB max
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ukuran file terlalu besar (maksimal 5MB)"})
+		return
+	}
+
+	// Get file from form
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file tidak ditemukan"})
+		return
+	}
+
+	// Read file content into memory (file will be closed after this)
+	fileContent, err := io.ReadAll(file)
+	file.Close()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membaca file"})
+		return
+	}
+
+	// Execute upload use case with in-memory content
+	output, err := h.uploadFotoProfilUC.Execute(c.Request.Context(), usecases.UploadFotoProfilInput{
+		UserID:   uuid.MustParse(userID.(string)),
+		FileName: header.Filename,
+		FileSize: header.Size,
+		Content:  bytes.NewReader(fileContent),
+	})
+	if err != nil {
+		if entities.IsValidation(err) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Foto profil berhasil diupload",
+		"data": gin.H{
+			"foto_profil": output.FotoProfilURL,
+			"nama":        output.Nama,
+		},
+	})
+}
+
+// DeleteFotoProfil handles profile photo deletion
+func (h *AuthHandler) DeleteFotoProfil(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tidak terautentikasi"})
+		return
+	}
+
+	// Execute delete use case
+	_, err := h.deleteFotoProfilUC.Execute(c.Request.Context(), usecases.DeleteFotoProfilInput{
+		UserID: uuid.MustParse(userID.(string)),
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Foto profil berhasil dihapus",
 	})
 }

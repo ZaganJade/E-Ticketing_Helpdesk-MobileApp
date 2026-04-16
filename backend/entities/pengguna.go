@@ -24,6 +24,7 @@ type Pengguna struct {
 	Email        string    `json:"email"`
 	PasswordHash string    `json:"-"` // Never expose in JSON
 	Peran        Role      `json:"peran"`
+	FotoProfil   string    `json:"foto_profil,omitempty"`
 	DibuatPada   time.Time `json:"dibuat_pada"`
 	DiperbaruiPada time.Time `json:"diperbarui_pada"`
 }
@@ -106,4 +107,17 @@ func (p *Pengguna) UpdateNama(nama string) error {
 	p.Nama = nama
 	p.DiperbaruiPada = time.Now()
 	return nil
+}
+
+// UpdateFotoProfil updates user's profile photo URL
+func (p *Pengguna) UpdateFotoProfil(url string) error {
+	p.FotoProfil = url
+	p.DiperbaruiPada = time.Now()
+	return nil
+}
+
+// DeleteFotoProfil removes user's profile photo
+func (p *Pengguna) DeleteFotoProfil() {
+	p.FotoProfil = ""
+	p.DiperbaruiPada = time.Now()
 }

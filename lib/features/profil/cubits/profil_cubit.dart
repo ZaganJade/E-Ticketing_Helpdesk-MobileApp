@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:logger/logger.dart';
 import '../models/profil_model.dart';
 import '../repositories/profil_repository.dart';
@@ -33,6 +34,25 @@ class ProfilUpdated extends ProfilState {
   final ProfilModel profil;
 
   const ProfilUpdated({required this.profil});
+
+  @override
+  List<Object?> get props => [profil];
+}
+
+class FotoProfilUploading extends ProfilState {
+  final ProfilModel profil;
+  final double progress;
+
+  const FotoProfilUploading({required this.profil, this.progress = 0});
+
+  @override
+  List<Object?> get props => [profil, progress];
+}
+
+class FotoProfilUpdated extends ProfilState {
+  final ProfilModel profil;
+
+  const FotoProfilUpdated({required this.profil});
 
   @override
   List<Object?> get props => [profil];
@@ -115,6 +135,55 @@ class ProfilCubit extends Cubit<ProfilState> {
       await _repository.logout();
       emit(const LoggedOut());
     } catch (e) {
+      emit(ProfilError(message: e.toString()));
+    }
+  }
+
+  // Upload foto profil dari gallery dengan validasi JPG/PNG
+  Future<void> uploadFotoProfil() async {
+    try {
+      // Get current profil first
+      final currentState = state;
+      ProfilModel? currentProfil;
+      if (currentState is ProfilLoaded) {
+        currentProfil = currentState.profil;
+      } else if (currentState is ProfilUpdated) {
+        currentProfil = currentState.profil;
+      }
+
+      if (currentProfil == null) {
+        emit(const ProfilError(message: 'Profil tidak ditemukan'));
+        return;
+      }
+
+      // Pick image dari gallery dengan validasi otomatis
+      final XFile? imageFile = await _repository.pickImageFromGallery();
+
+      // User cancelled picker
+      if (imageFile == null) return;
+
+      // Emit uploading state
+      emit(FotoProfilUploading(profil: currentProfil, progress: 0));
+
+      // Upload foto profil
+      final updatedProfil = await _repository.uploadFotoProfil(imageFile);
+
+      emit(FotoProfilUpdated(profil: updatedProfil));
+    } catch (e) {
+      _logger.e('[ProfilCubit] Error uploading photo: $e');
+      emit(ProfilError(message: e.toString()));
+    }
+  }
+
+  // Delete foto profil
+  Future<void> deleteFotoProfil() async {
+    emit(const ProfilLoading());
+
+    try {
+      final updatedProfil = await _repository.deleteFotoProfil();
+      emit(FotoProfilUpdated(profil: updatedProfil));
+    } catch (e) {
+      _logger.e('[ProfilCubit] Error deleting photo: $e');
       emit(ProfilError(message: e.toString()));
     }
   }

@@ -1,8 +1,10 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
 	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -72,15 +74,27 @@ func (h *LampiranHandler) UploadLampiran(c *gin.Context) {
 	userID := c.GetString("userID")
 	uid := uuid.MustParse(userID)
 
+	// Get MIME type for upload, but use extension for entity (entity stores extensions)
+	mimeType := header.Header.Get("Content-Type")
+	if mimeType == "" {
+		mimeType = getMimeTypeFromExt(ext)
+	}
+
+	// Remove leading dot from extension for entity validation
+	extForEntity := strings.TrimPrefix(ext, ".")
+	fmt.Printf("[DEBUG HANDLER] Uploading file: %s, ext: '%s', extForEntity: '%s', MIME: %s, size: %d\n", header.Filename, ext, extForEntity, mimeType, header.Size)
+
 	output, err := h.uploadUC.Execute(c.Request.Context(), usecases.UploadLampiranInput{
-		TiketID:    tuid,
-		NamaFile:   header.Filename,
-		Ukuran:     header.Size,
-		TipeFile:   ext,
-		Content:    file,
-		DibuatOleh: uid,
+		TiketID:     tuid,
+		NamaFile:    header.Filename,
+		Ukuran:      header.Size,
+		TipeFile:    extForEntity, // Pass extension without dot for entity validation
+		ContentType: mimeType,     // Pass MIME type for HTTP upload
+		Content:     file,
+		DibuatOleh:  uid,
 	})
 	if err != nil {
+		fmt.Printf("[DEBUG HANDLER] Upload error: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -113,6 +127,35 @@ func (h *LampiranHandler) DownloadLampiran(c *gin.Context) {
 }
 
 // DeleteLampiran handles file deletion
+// getMimeTypeFromExt converts file extension to MIME type
+func getMimeTypeFromExt(ext string) string {
+	ext = strings.ToLower(ext)
+	switch ext {
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".png":
+		return "image/png"
+	case ".gif":
+		return "image/gif"
+	case ".pdf":
+		return "application/pdf"
+	case ".doc":
+		return "application/msword"
+	case ".docx":
+		return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+	case ".xls":
+		return "application/vnd.ms-excel"
+	case ".xlsx":
+		return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	case ".txt":
+		return "text/plain"
+	case ".zip":
+		return "application/zip"
+	default:
+		return "application/octet-stream"
+	}
+}
+
 func (h *LampiranHandler) DeleteLampiran(c *gin.Context) {
 	lampiranID := c.Param("lampiran_id")
 	luid := uuid.MustParse(lampiranID)
