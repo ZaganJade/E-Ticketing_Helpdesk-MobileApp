@@ -1,21 +1,22 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logger/logger.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../features/auth/data/services/auth_interceptor.dart';
 import '../config/app_config.dart';
 
 /// API Service for Golang Backend
 /// Provides HTTP client with interceptors for auth, logging, and error handling
+/// Uses Supabase Auth token for authentication
 class ApiService {
   late final Dio _dio;
-  final FlutterSecureStorage _secureStorage;
+  final SupabaseClient _supabaseClient;
   final Logger _logger;
 
   ApiService({
-    required FlutterSecureStorage secureStorage,
+    required SupabaseClient supabaseClient,
     required Logger logger,
-  })  : _secureStorage = secureStorage,
+  })  : _supabaseClient = supabaseClient,
         _logger = logger {
     _dio = Dio(
       BaseOptions(
@@ -37,16 +38,17 @@ class ApiService {
   /// Get the base URL for API requests
   String get baseUrl => AppConfig().apiBaseUrl;
 
-  /// Get the current auth token
-  Future<String?> getToken() async {
-    return await _secureStorage.read(key: 'auth_token');
+  /// Get the current Supabase auth token
+  String? getToken() {
+    final session = _supabaseClient.auth.currentSession;
+    return session?.accessToken;
   }
 
   void _setupInterceptors() {
-    // Add AuthInterceptor for JWT token handling
+    // Add AuthInterceptor for Supabase JWT token handling
     _dio.interceptors.add(
       AuthInterceptor(
-        secureStorage: _secureStorage,
+        supabaseClient: _supabaseClient,
         logger: _logger,
       ),
     );

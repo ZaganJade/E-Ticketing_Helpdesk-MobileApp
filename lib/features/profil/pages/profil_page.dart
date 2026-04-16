@@ -162,6 +162,8 @@ class _ProfilPageState extends State<ProfilPage> {
           context.go('/login');
         } else if (state is ProfilError) {
           _showErrorSnackBar(state.message);
+        } else if (state is FotoProfilUpdated) {
+          _showSuccessSnackBar('Foto profil berhasil diperbarui');
         }
       },
       builder: (context, state) {
@@ -204,16 +206,34 @@ class _ProfilPageState extends State<ProfilPage> {
       );
     }
 
-    if (state is ProfilLoaded || state is ProfilUpdated) {
-      final profil = state is ProfilLoaded
-          ? state.profil
-          : (state as ProfilUpdated).profil;
+    if (state is ProfilLoaded || state is ProfilUpdated || state is FotoProfilUpdated || state is FotoProfilUploading) {
+      final ProfilModel profil;
+      if (state is ProfilLoaded) {
+        profil = state.profil;
+      } else if (state is ProfilUpdated) {
+        profil = state.profil;
+      } else if (state is FotoProfilUpdated) {
+        profil = state.profil;
+      } else if (state is FotoProfilUploading) {
+        profil = state.profil;
+      } else {
+        return const SizedBox.shrink();
+      }
 
       return RefreshIndicator(
         onRefresh: () => _cubit.loadProfil(),
         child: ListView(
           padding: EdgeInsets.all(horizontalPadding),
           children: [
+            if (state is FotoProfilUploading)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: LinearProgressIndicator(
+                  value: state.progress,
+                  backgroundColor: ShadTheme.of(context).colorScheme.muted,
+                  valueColor: AlwaysStoppedAnimation<Color>(ShadcnTheme.accent),
+                ),
+              ),
             _buildHeader(profil, isTablet),
             SizedBox(height: isTablet ? 24 : 16),
             _buildMenu(profil, isTablet),
@@ -332,9 +352,115 @@ class _ProfilPageState extends State<ProfilPage> {
     );
   }
 
+  void _showPhotoOptions(ProfilModel profil) {
+    showShadDialog(
+      context: context,
+      builder: (context) => ShadDialog(
+        title: const Text('Foto Profil'),
+        description: const Text('Pilih aksi untuk foto profil Anda'),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 16),
+            if (profil.fotoProfil != null) ...[
+              ShadButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _showDeletePhotoConfirmation(profil);
+                },
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.delete_outline, size: 20),
+                    SizedBox(width: 8),
+                    Text('Hapus Foto'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+            ShadButton.outline(
+              onPressed: () {
+                Navigator.pop(context);
+                _showPhotoFormatInfo();
+              },
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.info_outline, size: 20),
+                  SizedBox(width: 8),
+                  Text('Info Format'),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDeletePhotoConfirmation(ProfilModel profil) {
+    showShadDialog(
+      context: context,
+      builder: (context) => ShadDialog.alert(
+        title: const Text('Hapus Foto Profil'),
+        description: const Text('Apakah Anda yakin ingin menghapus foto profil?'),
+        actions: [
+          ShadButton.outline(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ShadButton.destructive(
+            onPressed: () {
+              Navigator.pop(context);
+              _cubit.deleteFotoProfil();
+            },
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPhotoFormatInfo() {
+    showShadDialog(
+      context: context,
+      builder: (context) => ShadDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline, size: 24),
+            SizedBox(width: 8),
+            Text('Format Foto'),
+          ],
+        ),
+        description: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Format yang diizinkan:', style: TextStyle(fontWeight: FontWeight.w600)),
+            SizedBox(height: 8),
+            Text('• JPG / JPEG'),
+            Text('• PNG'),
+            SizedBox(height: 12),
+            Text('Batasan:', style: TextStyle(fontWeight: FontWeight.w600)),
+            SizedBox(height: 8),
+            Text('• Ukuran maksimal: 5MB'),
+            Text('• Resolusi maksimal: 1024x1024 px'),
+          ],
+        ),
+        actions: [
+          ShadButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tutup'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeader(ProfilModel profil, bool isTablet) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final roleColor = _getRoleColor(profil.peran);
+    final hasPhoto = profil.fotoProfil != null && profil.fotoProfil!.isNotEmpty;
 
     return Container(
       padding: EdgeInsets.all(isTablet ? 32 : 24),
@@ -348,41 +474,80 @@ class _ProfilPageState extends State<ProfilPage> {
       ),
       child: Column(
         children: [
-          // Avatar with gradient
-          Container(
-            width: isTablet ? 100 : 80,
-            height: isTablet ? 100 : 80,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  roleColor.withValues(alpha: 0.9),
-                  roleColor.withValues(alpha: 0.7),
-                ],
-              ),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: roleColor.withValues(alpha: 0.3),
-                width: 4,
-              ),
-              boxShadow: [
-                BoxShadow(
+          // Avatar with tap gesture untuk upload
+          GestureDetector(
+            onTap: () => _cubit.uploadFotoProfil(),
+            onLongPress: () => _showPhotoOptions(profil),
+            child: Container(
+              width: isTablet ? 100 : 80,
+              height: isTablet ? 100 : 80,
+              decoration: BoxDecoration(
+                gradient: hasPhoto
+                    ? null
+                    : LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          roleColor.withValues(alpha: 0.9),
+                          roleColor.withValues(alpha: 0.7),
+                        ],
+                      ),
+                color: hasPhoto ? null : null,
+                shape: BoxShape.circle,
+                border: Border.all(
                   color: roleColor.withValues(alpha: 0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+                  width: 4,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: roleColor.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+                image: hasPhoto
+                    ? DecorationImage(
+                        image: NetworkImage(profil.fotoProfil!),
+                        fit: BoxFit.cover,
+                        onError: (exception, stackTrace) {},
+                      )
+                    : null,
+              ),
+              child: !hasPhoto
+                  ? Center(
+                      child: Text(
+                        profil.inisial,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: isTablet ? 36 : 28,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    )
+                  : null,
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Upload hint text
+          GestureDetector(
+            onTap: () => _cubit.uploadFotoProfil(),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.camera_alt_outlined,
+                  size: 14,
+                  color: ShadTheme.of(context).colorScheme.mutedForeground,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  hasPhoto ? 'Tap untuk ganti, tahan untuk opsi' : 'Tap untuk tambah foto (JPG/PNG)',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: ShadTheme.of(context).colorScheme.mutedForeground,
+                  ),
                 ),
               ],
-            ),
-            child: Center(
-              child: Text(
-                profil.inisial,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: isTablet ? 36 : 28,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
             ),
           ),
           SizedBox(height: isTablet ? 24 : 20),

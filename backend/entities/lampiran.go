@@ -66,14 +66,52 @@ func validateLampiran(namaFile string, ukuran int64, tipeFile string) error {
 }
 
 // IsAllowedFileType checks if file type is allowed
+// Accepts: "jpg", ".jpg", "file.jpg", "image/jpeg"
 func IsAllowedFileType(tipeFile string) bool {
-	ext := strings.ToLower(strings.TrimPrefix(filepath.Ext(tipeFile), "."))
+	tipeFile = strings.ToLower(strings.TrimSpace(tipeFile))
+	if tipeFile == "" {
+		return false
+	}
+
+	// If it contains a slash, it's a MIME type - extract extension
+	if strings.Contains(tipeFile, "/") {
+		tipeFile = mimeToExt(tipeFile)
+	}
+
+	// Remove leading dot if present
+	ext := strings.TrimPrefix(tipeFile, ".")
+
+	// If ext contains a dot, extract the extension properly
+	if strings.Contains(ext, ".") {
+		ext = strings.ToLower(strings.TrimPrefix(filepath.Ext(ext), "."))
+	}
+
 	for _, allowed := range AllowedFileTypes {
 		if ext == allowed {
 			return true
 		}
 	}
 	return false
+}
+
+// mimeToExt converts common MIME types to file extensions
+func mimeToExt(mimeType string) string {
+	switch mimeType {
+	case "image/jpeg":
+		return "jpg"
+	case "image/png":
+		return "png"
+	case "image/gif":
+		return "gif"
+	case "application/pdf":
+		return "pdf"
+	case "application/msword":
+		return "doc"
+	case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+		return "docx"
+	default:
+		return ""
+	}
 }
 
 // GetFileExtension returns file extension

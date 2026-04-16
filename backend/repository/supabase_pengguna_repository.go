@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"eticketinghelpdesk/entities"
@@ -92,6 +93,25 @@ func (r *SupabasePenggunaRepository) Update(ctx context.Context, pengguna *entit
 
 	if err != nil {
 		return fmt.Errorf("failed to update user: %w", err)
+	}
+
+	return nil
+}
+
+// UpdateFotoProfil updates user's profile photo URL
+func (r *SupabasePenggunaRepository) UpdateFotoProfil(ctx context.Context, id uuid.UUID, fotoProfilURL string) error {
+	data := map[string]interface{}{
+		"foto_profil":     fotoProfilURL,
+		"diperbarui_pada": time.Now(),
+	}
+
+	_, _, err := r.client.GetTable("pengguna").
+		Update(data, "", "").
+		Eq("id", id.String()).
+		Execute()
+
+	if err != nil {
+		return fmt.Errorf("failed to update profile photo: %w", err)
 	}
 
 	return nil

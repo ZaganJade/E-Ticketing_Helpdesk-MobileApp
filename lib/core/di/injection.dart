@@ -49,19 +49,17 @@ Future<void> initDependencies() async {
     () => SupabaseService.client,
   );
 
-  // API Service (Golang Backend) - Register BEFORE repositories
+  // API Service (Golang Backend) - Uses Supabase token for auth
   getIt.registerLazySingleton<ApiService>(
     () => ApiService(
-      secureStorage: getIt(),
-      logger: getIt(),
+      supabaseClient: getIt<SupabaseClient>(),
+      logger: getIt<Logger>(),
     ),
   );
 
-  // Auth Repository - depends on ApiService (non-lazy to ensure availability)
+  // Auth Repository - Uses Supabase Auth SDK directly
   final authRepo = AuthRepositoryImpl(
     supabaseClient: getIt<SupabaseClient>(),
-    secureStorage: getIt<FlutterSecureStorage>(),
-    apiService: getIt<ApiService>(),
     logger: getIt<Logger>(),
   );
   getIt.registerSingleton<AuthRepository>(authRepo);

@@ -4,6 +4,7 @@ class ProfilModel {
   final String email;
   final String peran;
   final DateTime dibuatPada;
+  final String? fotoProfil;
 
   ProfilModel({
     required this.id,
@@ -11,6 +12,7 @@ class ProfilModel {
     required this.email,
     required this.peran,
     required this.dibuatPada,
+    this.fotoProfil,
   });
 
   factory ProfilModel.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,7 @@ class ProfilModel {
       email: json['email'] as String,
       peran: json['peran'] as String,
       dibuatPada: DateTime.parse(json['dibuat_pada'] as String),
+      fotoProfil: json['foto_profil'] as String?,
     );
   }
 
@@ -30,6 +33,7 @@ class ProfilModel {
       'email': email,
       'peran': peran,
       'dibuat_pada': dibuatPada.toIso8601String(),
+      'foto_profil': fotoProfil,
     };
   }
 
@@ -39,6 +43,7 @@ class ProfilModel {
     String? email,
     String? peran,
     DateTime? dibuatPada,
+    String? fotoProfil,
   }) {
     return ProfilModel(
       id: id ?? this.id,
@@ -46,6 +51,7 @@ class ProfilModel {
       email: email ?? this.email,
       peran: peran ?? this.peran,
       dibuatPada: dibuatPada ?? this.dibuatPada,
+      fotoProfil: fotoProfil ?? this.fotoProfil,
     );
   }
 
