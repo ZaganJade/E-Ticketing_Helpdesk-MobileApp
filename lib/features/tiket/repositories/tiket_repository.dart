@@ -1,3 +1,9 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
+
 import '../../../core/services/api_service.dart';
 import '../../../features/auth/domain/repositories/auth_repository.dart';
 import '../../../core/di/injection.dart';
@@ -74,17 +80,56 @@ class TiketRepository {
   Future<TiketModel> createTiket({
     required String judul,
     required String deskripsi,
+    List<PlatformFile>? lampiranFiles,
   }) async {
     try {
       final user = await _authRepository.getCurrentUser();
       if (user == null) throw Exception('User tidak terautentikasi');
 
+      if (kDebugMode) {
+        print('🎫 Creating ticket: $judul');
+        print('📎 Files to upload: ${lampiranFiles?.length ?? 0}');
+      }
+
+      // Create multipart form data
+      final formData = FormData.fromMap({
+        'judul': judul,
+        'deskripsi': deskripsi,
+      });
+
+      // Add files to form
+      if (lampiranFiles != null && lampiranFiles.isNotEmpty) {
+        for (int i = 0; i < lampiranFiles.length; i++) {
+          final file = lampiranFiles[i];
+          final fileBytes = file.bytes;
+          if (fileBytes == null) {
+            throw Exception('File bytes is null for ${file.name}');
+          }
+
+          // Create temp file for multipart upload
+          final tempDir = Directory.systemTemp;
+          final tempPath = '${tempDir.path}/${file.name}';
+          final tempFile = File(tempPath);
+          await tempFile.writeAsBytes(fileBytes);
+
+          if (kDebugMode) {
+            print('📄 Adding file $i to form: ${file.name}');
+            print('   Size: ${file.size} bytes');
+          }
+
+          formData.files.add(MapEntry(
+            'files',
+            await MultipartFile.fromFile(
+              tempPath,
+              filename: file.name,
+            ),
+          ));
+        }
+      }
+
       final response = await _apiService.post(
         '/tikets',
-        data: {
-          'judul': judul,
-          'deskripsi': deskripsi,
-        },
+        data: formData,
       );
 
       final data = response.data;
@@ -93,8 +138,17 @@ class TiketRepository {
       }
 
       final tiketData = data['data'] ?? data;
-      return TiketModel.fromJson(tiketData as Map<String, dynamic>);
+      final tiket = TiketModel.fromJson(tiketData as Map<String, dynamic>);
+
+      if (kDebugMode) {
+        print('✅ Ticket created: ${tiket.id}');
+      }
+
+      return tiket;
     } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error creating ticket: $e');
+      }
       throw Exception('Gagal membuat tiket: $e');
     }
   }

@@ -75,7 +75,7 @@ func main() {
 
 	// Create handlers
 	authHandler := httpDelivery.NewAuthHandler(registerUC, loginUC, logoutUC, uploadFotoProfilUC, deleteFotoProfilUC)
-	tiketHandler := httpDelivery.NewTiketHandler(createTiketUC, getTiketListUC, getTiketDetailUC, updateTiketStatusUC, assignTiketUC)
+	tiketHandler := httpDelivery.NewTiketHandler(createTiketUC, getTiketListUC, getTiketDetailUC, updateTiketStatusUC, assignTiketUC, uploadLampiranUC)
 	komentarHandler := httpDelivery.NewKomentarHandler(addKomentarUC)
 	notifikasiHandler := httpDelivery.NewNotifikasiHandler(getNotifikasiListUC, markNotifikasiReadUC)
 	lampiranHandler := httpDelivery.NewLampiranHandler(uploadLampiranUC, deleteLampiranUC, lampiranRepo)

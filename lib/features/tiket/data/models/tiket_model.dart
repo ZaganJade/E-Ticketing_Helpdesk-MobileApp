@@ -12,11 +12,21 @@ class TiketModel extends Tiket {
     super.namaPenanggungJawab,
     required super.dibuatPada,
     super.diperbaruiPada,
+    super.lampiran,
   });
 
   factory TiketModel.fromJson(Map<String, dynamic> json) {
     final penggunaData = json['pengguna'] as Map<String, dynamic>?;
     final penanggungJawabData = json['penanggung_jawab'] as Map<String, dynamic>?;
+
+    List<String>? lampiranList;
+    if (json['lampiran'] != null) {
+      if (json['lampiran'] is List) {
+        lampiranList = (json['lampiran'] as List)
+            .map((e) => e.toString())
+            .toList();
+      }
+    }
 
     return TiketModel(
       id: json['id'] as String,
@@ -31,6 +41,7 @@ class TiketModel extends Tiket {
       diperbaruiPada: json['diperbarui_pada'] != null
           ? DateTime.parse(json['diperbarui_pada'] as String)
           : null,
+      lampiran: lampiranList,
     );
   }
 
@@ -44,6 +55,7 @@ class TiketModel extends Tiket {
       'ditugaskan_kepada': ditugaskanKepada,
       'dibuat_pada': dibuatPada.toIso8601String(),
       'diperbarui_pada': diperbaruiPada?.toIso8601String(),
+      'lampiran': lampiran,
     };
   }
 
@@ -58,6 +70,7 @@ class TiketModel extends Tiket {
     String? namaPenanggungJawab,
     DateTime? dibuatPada,
     DateTime? diperbaruiPada,
+    List<String>? lampiran,
   }) {
     return TiketModel(
       id: id ?? this.id,
@@ -70,6 +83,7 @@ class TiketModel extends Tiket {
       namaPenanggungJawab: namaPenanggungJawab ?? this.namaPenanggungJawab,
       dibuatPada: dibuatPada ?? this.dibuatPada,
       diperbaruiPada: diperbaruiPada ?? this.diperbaruiPada,
+      lampiran: lampiran ?? this.lampiran,
     );
   }
 }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../features/admin_dashboard/admin_dashboard.dart';
 import '../../features/auth/auth.dart';
 import '../../features/dashboard/dashboard.dart';
+import '../../features/helpdesk_dashboard/helpdesk_dashboard.dart';
 import '../../features/notifikasi/notifikasi.dart';
 import '../../features/profil/profil.dart';
 import '../../features/tiket/tiket.dart';
@@ -75,7 +77,47 @@ class AppRouter {
           GoRoute(
             path: '/dashboard',
             name: 'dashboard',
-            builder: (context, state) => const DashboardPage(),
+            builder: (context, state) {
+              final authState = context.read<AuthCubit>().state;
+              final user = authState is Authenticated ? authState.user : null;
+              if (user?.peran == Peran.admin) {
+                return const AdminDashboardPage();
+              }
+              if (user?.peran == Peran.helpdesk) {
+                return const HelpdeskDashboardPage();
+              }
+              return const DashboardPage();
+            },
+          ),
+
+          // Helpdesk Dashboard (Helpdesk only)
+          GoRoute(
+            path: '/helpdesk/dashboard',
+            name: 'helpdesk-dashboard',
+            redirect: (context, state) async {
+              final authState = context.read<AuthCubit>().state;
+              final user = authState is Authenticated ? authState.user : null;
+              if (user?.peran != Peran.helpdesk) {
+                return '/dashboard';
+              }
+              return null;
+            },
+            builder: (context, state) => const HelpdeskDashboardPage(),
+          ),
+
+          // Admin Dashboard (Admin only)
+          GoRoute(
+            path: '/admin/dashboard',
+            name: 'admin-dashboard',
+            redirect: (context, state) async {
+              final authState = context.read<AuthCubit>().state;
+              final user = authState is Authenticated ? authState.user : null;
+              if (user?.peran != Peran.admin) {
+                return '/dashboard';
+              }
+              return null;
+            },
+            builder: (context, state) => const AdminDashboardPage(),
           ),
 
           // Tiket Routes

@@ -1,7 +1,9 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide MultipartFile;
 import '../../features/auth/data/services/auth_interceptor.dart';
 import '../config/app_config.dart';
 
@@ -84,5 +86,27 @@ class ApiService {
 
   Future<Response> delete(String path) async {
     return _dio.delete(path);
+  }
+
+  /// Upload file using multipart/form-data
+  /// Used for uploading lampiran files to backend
+  Future<Response> uploadFile(
+    String path, {
+    required String filePath, // The key name in multipart form (e.g., 'file')
+    required File file,
+  }) async {
+    final formData = FormData.fromMap({
+      filePath: await MultipartFile.fromFile(file.path),
+    });
+
+    return _dio.post(
+      path,
+      data: formData,
+      options: Options(
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      ),
+    );
   }
 }

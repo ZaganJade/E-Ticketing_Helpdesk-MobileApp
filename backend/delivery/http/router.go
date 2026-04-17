@@ -64,7 +64,7 @@ func NewRouter(
 		jwtMiddleware:          jwtMiddleware,
 		supabaseAuthMiddleware: supabaseAuthMiddleware,
 		authHandler:            NewAuthHandler(registerUC, loginUC, logoutUC, uploadFotoProfilUC, deleteFotoProfilUC),
-		tiketHandler:           NewTiketHandler(createTiketUC, getTiketListUC, getTiketDetailUC, updateTiketStatusUC, assignTiketUC),
+		tiketHandler:           NewTiketHandler(createTiketUC, getTiketListUC, getTiketDetailUC, updateTiketStatusUC, assignTiketUC, uploadLampiranUC),
 		komentarHandler:        NewKomentarHandler(addKomentarUC),
 		notifikasiHandler:      NewNotifikasiHandler(getNotifikasiListUC, markNotifikasiReadUC),
 		lampiranHandler:        NewLampiranHandler(uploadLampiranUC, deleteLampiranUC, lampiranRepo),

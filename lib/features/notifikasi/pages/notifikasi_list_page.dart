@@ -339,26 +339,31 @@ class _NotifikasiListPageState extends State<NotifikasiListPage>
     return ListView.separated(
       padding: EdgeInsets.all(isTablet ? 24 : 16),
       itemCount: 5,
-      separatorBuilder: (_, __) => SizedBox(height: isTablet ? 16 : 12),
+      separatorBuilder: (_, _) => SizedBox(height: isTablet ? 12 : 8),
       itemBuilder: (context, index) {
-        return Container(
+        return ShadCard(
           padding: EdgeInsets.all(isTablet ? 16 : 12),
-          decoration: BoxDecoration(
-            color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
-            ),
-          ),
+          backgroundColor: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Icon skeleton
+              // Icon with gradient background skeleton
               Container(
-                width: isTablet ? 44 : 40,
-                height: isTablet ? 44 : 40,
+                width: isTablet ? 48 : 44,
+                height: isTablet ? 48 : 44,
                 decoration: BoxDecoration(
-                  color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      (isDark
+                          ? ShadcnTheme.darkBorder
+                          : ShadcnTheme.border).withValues(alpha: 0.6),
+                      (isDark
+                          ? ShadcnTheme.darkBorder
+                          : ShadcnTheme.border).withValues(alpha: 0.3),
+                    ],
+                  ),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -368,22 +373,73 @@ class _NotifikasiListPageState extends State<NotifikasiListPage>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Title row with unread indicator skeleton
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            width: isTablet ? 200 : 180,
+                            height: isTablet ? 16 : 15,
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? ShadcnTheme.darkBorder
+                                  : ShadcnTheme.border,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                        // Unread indicator dot skeleton
+                        Container(
+                          width: 10,
+                          height: 10,
+                          margin: const EdgeInsets.only(left: 8),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? ShadcnTheme.darkBorder
+                                : ShadcnTheme.border,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: isTablet ? 6 : 4),
+                    // Message text skeleton (2 lines)
                     Container(
-                      width: 140,
-                      height: isTablet ? 16 : 14,
+                      width: double.infinity,
+                      height: isTablet ? 30 : 28,
                       decoration: BoxDecoration(
-                        color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
+                        color: isDark
+                            ? ShadcnTheme.darkBorder
+                            : ShadcnTheme.border,
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
-                    SizedBox(height: isTablet ? 10 : 8),
-                    Container(
-                      width: double.infinity,
-                      height: isTablet ? 50 : 40,
-                      decoration: BoxDecoration(
-                        color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
+                    SizedBox(height: isTablet ? 8 : 6),
+                    // Time row skeleton
+                    Row(
+                      children: [
+                        Container(
+                          width: isTablet ? 14 : 13,
+                          height: isTablet ? 14 : 13,
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? ShadcnTheme.darkBorder
+                                : ShadcnTheme.border,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        SizedBox(width: isTablet ? 4 : 3),
+                        Container(
+                          width: isTablet ? 80 : 70,
+                          height: isTablet ? 13 : 12,
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? ShadcnTheme.darkBorder
+                                : ShadcnTheme.border,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -474,7 +530,7 @@ class _NotifikasiListPageState extends State<NotifikasiListPage>
         controller: _scrollController,
         padding: EdgeInsets.all(isTablet ? 24 : 16),
         itemCount: notifikasiList.length + (hasMore ? 1 : 0),
-        separatorBuilder: (_, __) => SizedBox(height: isTablet ? 12 : 8),
+        separatorBuilder: (_, _) => SizedBox(height: isTablet ? 12 : 8),
         itemBuilder: (context, index) {
           if (index == notifikasiList.length) {
             return isLoadingMore

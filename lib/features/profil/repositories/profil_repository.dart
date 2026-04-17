@@ -53,6 +53,7 @@ class ProfilRepository {
         email: user.email,
         peran: user.peran.name,
         dibuatPada: user.dibuatPada,
+        fotoProfil: user.fotoProfil,
       );
 
       _logger.i('[ProfilRepository] Profil created: ${profil.nama}, ${profil.email}');
@@ -85,6 +86,7 @@ class ProfilRepository {
         email: user.email,
         peran: user.peran.name,
         dibuatPada: user.dibuatPada,
+        fotoProfil: user.fotoProfil,
       );
     } catch (e) {
       throw Exception('Gagal mengupdate nama: $e');
