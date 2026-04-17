@@ -4,8 +4,10 @@ import 'package:get_it/get_it.dart';
 import 'package:logger/logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../features/admin_dashboard/admin_dashboard.dart';
 import '../../features/auth/auth.dart';
 import '../../features/dashboard/domain/repositories/dashboard_repository.dart';
+import '../../features/helpdesk_dashboard/helpdesk_dashboard.dart';
 import '../../features/dashboard/data/repositories/dashboard_repository_impl.dart';
 import '../../features/dashboard/presentation/cubit/dashboard_cubit.dart';
 import '../../features/komentar/komentar.dart';
@@ -141,6 +143,43 @@ Future<void> initDependencies() async {
   // Cubits
   getIt.registerFactory<TiketCubit>(
     () => TiketCubit(tiketRepository: getIt()),
+  );
+
+  // ============================
+  // Admin Dashboard Feature
+  // ============================
+
+  // Admin Dashboard Repository
+  getIt.registerLazySingleton<AdminDashboardRepository>(
+    () => AdminDashboardRepositoryImpl(
+      apiService: getIt<ApiService>(),
+      authRepository: getIt<AuthRepository>(),
+    ),
+  );
+
+  // Admin Dashboard Cubit
+  getIt.registerFactory<AdminDashboardCubit>(
+    () => AdminDashboardCubit(
+      repository: getIt<AdminDashboardRepository>(),
+    ),
+  );
+
+  // ============================
+  // Helpdesk Dashboard Feature
+  // ============================
+
+  // Helpdesk Dashboard Repository
+  getIt.registerLazySingleton<HelpdeskDashboardRepository>(
+    () => HelpdeskDashboardRepositoryImpl(
+      apiService: getIt<ApiService>(),
+    ),
+  );
+
+  // Helpdesk Dashboard Cubit
+  getIt.registerFactory<HelpdeskDashboardCubit>(
+    () => HelpdeskDashboardCubit(
+      repository: getIt<HelpdeskDashboardRepository>(),
+    ),
   );
 }
 

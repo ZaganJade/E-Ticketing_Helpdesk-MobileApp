@@ -8,6 +8,7 @@ class PenggunaModel extends Pengguna {
     required super.email,
     required super.peran,
     required super.dibuatPada,
+    super.fotoProfil,
   });
 
   /// Create PenggunaModel from JSON (handles both Indonesian and English field names)
@@ -26,6 +27,8 @@ class PenggunaModel extends Pengguna {
         json['created_at']?.toString() ??
         json['dibuat']?.toString();
 
+    final fotoProfil = json['foto_profil']?.toString();
+
     return PenggunaModel(
       id: json['id']?.toString() ?? '',
       nama: nama,
@@ -34,6 +37,7 @@ class PenggunaModel extends Pengguna {
       dibuatPada: dibuatPadaStr != null
           ? DateTime.tryParse(dibuatPadaStr) ?? DateTime.now()
           : DateTime.now(),
+      fotoProfil: fotoProfil,
     );
   }
 
@@ -45,6 +49,7 @@ class PenggunaModel extends Pengguna {
       'email': email,
       'peran': peran.name,
       'dibuat_pada': dibuatPada.toIso8601String(),
+      'foto_profil': fotoProfil,
     };
   }
 
@@ -60,6 +65,7 @@ class PenggunaModel extends Pengguna {
       email: email,
       peran: Peran.fromString(userMetadata['peran'] as String? ?? 'pengguna'),
       dibuatPada: DateTime.now(),
+      fotoProfil: userMetadata['foto_profil'] as String?,
     );
   }
 
@@ -71,6 +77,7 @@ class PenggunaModel extends Pengguna {
     String? email,
     Peran? peran,
     DateTime? dibuatPada,
+    String? fotoProfil,
   }) {
     return PenggunaModel(
       id: id ?? this.id,
@@ -78,6 +85,7 @@ class PenggunaModel extends Pengguna {
       email: email ?? this.email,
       peran: peran ?? this.peran,
       dibuatPada: dibuatPada ?? this.dibuatPada,
+      fotoProfil: fotoProfil ?? this.fotoProfil,
     );
   }
 }

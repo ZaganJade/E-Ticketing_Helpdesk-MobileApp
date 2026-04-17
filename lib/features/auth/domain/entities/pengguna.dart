@@ -7,6 +7,7 @@ class Pengguna extends Equatable {
   final String email;
   final Peran peran;
   final DateTime dibuatPada;
+  final String? fotoProfil;
 
   const Pengguna({
     required this.id,
@@ -14,10 +15,11 @@ class Pengguna extends Equatable {
     required this.email,
     required this.peran,
     required this.dibuatPada,
+    this.fotoProfil,
   });
 
   @override
-  List<Object?> get props => [id, nama, email, peran, dibuatPada];
+  List<Object?> get props => [id, nama, email, peran, dibuatPada, fotoProfil];
 
   /// Create a copy of this Pengguna with modified fields
   Pengguna copyWith({
@@ -26,6 +28,7 @@ class Pengguna extends Equatable {
     String? email,
     Peran? peran,
     DateTime? dibuatPada,
+    String? fotoProfil,
   }) {
     return Pengguna(
       id: id ?? this.id,
@@ -33,6 +36,7 @@ class Pengguna extends Equatable {
       email: email ?? this.email,
       peran: peran ?? this.peran,
       dibuatPada: dibuatPada ?? this.dibuatPada,
+      fotoProfil: fotoProfil ?? this.fotoProfil,
     );
   }
 }

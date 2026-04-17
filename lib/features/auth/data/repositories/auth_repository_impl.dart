@@ -83,6 +83,7 @@ class AuthRepositoryImpl implements AuthRepository {
         email: email,
         peran: Peran.pengguna,
         dibuatPada: DateTime.now(),
+        fotoProfil: null,
       );
 
       _logger.i('Registration successful for user: ${pengguna.id}');
@@ -190,6 +191,7 @@ class AuthRepositoryImpl implements AuthRepository {
           email: authUser?.email ?? '',
           peran: Peran.fromString(authUser?.userMetadata?['peran'] ?? 'pengguna'),
           dibuatPada: DateTime.now(),
+          fotoProfil: authUser?.userMetadata?['foto_profil'] as String?,
         );
       }
 
@@ -204,6 +206,7 @@ class AuthRepositoryImpl implements AuthRepository {
         email: authUser?.email ?? '',
         peran: Peran.fromString(authUser?.userMetadata?['peran'] ?? 'pengguna'),
         dibuatPada: DateTime.now(),
+        fotoProfil: authUser?.userMetadata?['foto_profil'] as String?,
       );
     }
   }

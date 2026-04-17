@@ -18,18 +18,26 @@ const (
 
 // Tiket represents a support ticket
 type Tiket struct {
-	ID                uuid.UUID  `json:"id"`
-	Judul             string     `json:"judul"`
-	Deskripsi         string     `json:"deskripsi"`
-	Status            Status     `json:"status"`
-	DibuatOleh        uuid.UUID  `json:"dibuat_oleh"`
-	DitugaskanKepada  *uuid.UUID `json:"ditugaskan_kepada,omitempty"`
-	DibuatPada        time.Time  `json:"dibuat_pada"`
-	DiperbaruiPada    time.Time  `json:"diperbarui_pada"`
-	SelesaiPada       *time.Time `json:"selesai_pada,omitempty"`
+	ID                uuid.UUID   `json:"id"`
+	Judul             string      `json:"judul"`
+	Deskripsi         string      `json:"deskripsi"`
+	Status            Status      `json:"status"`
+	DibuatOleh        uuid.UUID   `json:"dibuat_oleh"`
+	DitugaskanKepada  *uuid.UUID  `json:"ditugaskan_kepada,omitempty"`
+	DibuatPada        time.Time   `json:"dibuat_pada"`
+	DiperbaruiPada    time.Time   `json:"diperbarui_pada"`
+	SelesaiPada       *time.Time  `json:"selesai_pada,omitempty"`
 	// Nested relations from Supabase
-	Pengguna  *PenggunaInfo  `json:"pengguna,omitempty"`
-	Assigned  *PenggunaInfo  `json:"assigned,omitempty"`
+	Pengguna   *PenggunaInfo   `json:"pengguna,omitempty"`
+	Assigned   *PenggunaInfo   `json:"assigned,omitempty"`
+	Lampiran   []*LampiranInfo `json:"lampiran,omitempty"`
+}
+
+// LampiranInfo holds basic lampiran info for response
+type LampiranInfo struct {
+	ID       uuid.UUID `json:"id"`
+	NamaFile string    `json:"nama_file"`
+	URL      string    `json:"url"`
 }
 
 // PenggunaInfo holds basic user info from relations

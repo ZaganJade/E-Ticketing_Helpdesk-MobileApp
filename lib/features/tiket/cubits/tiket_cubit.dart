@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../models/tiket_model.dart';
@@ -190,6 +191,7 @@ class TiketCubit extends Cubit<TiketState> {
   Future<void> createTiket({
     required String judul,
     required String deskripsi,
+    List<PlatformFile>? lampiranFiles,
   }) async {
     emit(const TiketLoading());
 
@@ -197,6 +199,7 @@ class TiketCubit extends Cubit<TiketState> {
       final tiket = await _repository.createTiket(
         judul: judul,
         deskripsi: deskripsi,
+        lampiranFiles: lampiranFiles,
       );
       emit(CreateTiketSuccess(tiket: tiket));
     } catch (e) {

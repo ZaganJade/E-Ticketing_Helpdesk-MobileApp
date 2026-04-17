@@ -40,7 +40,15 @@ class SupabaseService {
   static SupabaseStorageClient get storage => client.storage;
 
   /// Get bucket for lampiran tiket
-  static String get lampiranBucketName => 'lampiran_tiket';
+  static String get lampiranBucketName => 'Lampiran E-Ticket';
+
+  /// Get storage bucket with proper encoding for spaces
+  static StorageFileApi get lampiranBucket {
+    if (kDebugMode) {
+      print('📦 Using bucket: $lampiranBucketName');
+    }
+    return storage.from(lampiranBucketName);
+  }
 
   /// Check if user is authenticated
   static bool get isAuthenticated => auth.currentUser != null;

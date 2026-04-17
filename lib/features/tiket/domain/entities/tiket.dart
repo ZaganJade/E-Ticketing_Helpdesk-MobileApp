@@ -41,6 +41,7 @@ class Tiket extends Equatable {
   final String? namaPenanggungJawab;
   final DateTime dibuatPada;
   final DateTime? diperbaruiPada;
+  final List<String>? lampiran;
 
   const Tiket({
     required this.id,
@@ -53,6 +54,7 @@ class Tiket extends Equatable {
     this.namaPenanggungJawab,
     required this.dibuatPada,
     this.diperbaruiPada,
+    this.lampiran,
   });
 
   @override
@@ -67,6 +69,7 @@ class Tiket extends Equatable {
         namaPenanggungJawab,
         dibuatPada,
         diperbaruiPada,
+        lampiran,
       ];
 
   Tiket copyWith({
@@ -80,6 +83,7 @@ class Tiket extends Equatable {
     String? namaPenanggungJawab,
     DateTime? dibuatPada,
     DateTime? diperbaruiPada,
+    List<String>? lampiran,
   }) {
     return Tiket(
       id: id ?? this.id,
@@ -92,6 +96,7 @@ class Tiket extends Equatable {
       namaPenanggungJawab: namaPenanggungJawab ?? this.namaPenanggungJawab,
       dibuatPada: dibuatPada ?? this.dibuatPada,
       diperbaruiPada: diperbaruiPada ?? this.diperbaruiPada,
+      lampiran: lampiran ?? this.lampiran,
     );
   }
 }
