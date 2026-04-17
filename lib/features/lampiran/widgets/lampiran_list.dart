@@ -16,11 +16,13 @@ import 'lampiran_preview.dart';
 class LampiranList extends StatefulWidget {
   final String tiketId;
   final bool canDelete;
+  final VoidCallback? onAdd;
 
   const LampiranList({
     super.key,
     required this.tiketId,
     this.canDelete = true,
+    this.onAdd,
   });
 
   @override
@@ -221,7 +223,7 @@ class LampiranListState extends State<LampiranList> {
                         ShadcnTheme.accent.withValues(alpha: 0.1),
                       ],
                     ),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     Icons.attach_file_rounded,
@@ -239,6 +241,52 @@ class LampiranListState extends State<LampiranList> {
                     letterSpacing: -0.3,
                   ),
                 ),
+                if (widget.onAdd != null) ...[
+                  const Spacer(),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: widget.onAdd,
+                      borderRadius: BorderRadius.circular(8),
+                      overlayColor: WidgetStateProperty.all(
+                        ShadcnTheme.accent.withValues(alpha: 0.15),
+                      ),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isTablet ? 14 : 12,
+                          vertical: isTablet ? 8 : 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: ShadcnTheme.accent.withValues(alpha: 0.1),
+                          border: Border.all(
+                            color: ShadcnTheme.accent.withValues(alpha: 0.3),
+                            width: 1,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.add_circle_outline_rounded,
+                              size: isTablet ? 18 : 16,
+                              color: ShadcnTheme.accent,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Tambah',
+                              style: TextStyle(
+                                fontSize: isTablet ? 14 : 13,
+                                fontWeight: FontWeight.w600,
+                                color: ShadcnTheme.accent,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
             SizedBox(height: isTablet ? 20 : 16),
@@ -258,7 +306,7 @@ class LampiranListState extends State<LampiranList> {
 
                 if (state is LampiranListLoaded) {
                   if (state.lampiranList.isEmpty) {
-                    return EmptyState.attachments();
+                    return _buildPremiumEmptyState(context, isDark, isTablet);
                   }
 
                   return _LampiranGrid(
@@ -351,6 +399,74 @@ class LampiranListState extends State<LampiranList> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumEmptyState(BuildContext context, bool isDark, bool isTablet) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        vertical: isTablet ? 40 : 32,
+        horizontal: isTablet ? 24 : 16,
+      ),
+      decoration: BoxDecoration(
+        color: isDark 
+            ? ShadcnTheme.darkBorder.withValues(alpha: 0.3) 
+            : ShadcnTheme.muted.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark 
+              ? ShadcnTheme.darkBorder.withValues(alpha: 0.5) 
+              : ShadcnTheme.border.withValues(alpha: 0.5),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: EdgeInsets.all(isTablet ? 16 : 14),
+            decoration: BoxDecoration(
+              color: isDark 
+                  ? ShadcnTheme.darkBorder.withValues(alpha: 0.5) 
+                  : ShadcnTheme.border.withValues(alpha: 0.5),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.attach_file_rounded,
+              size: isTablet ? 40 : 32,
+              color: ShadTheme.of(context).colorScheme.mutedForeground.withValues(alpha: 0.7),
+            ),
+          ),
+          SizedBox(height: isTablet ? 20 : 16),
+          Text(
+            'Belum Ada Lampiran',
+            style: TextStyle(
+              fontSize: isTablet ? 16 : 15,
+              fontWeight: FontWeight.w600,
+              color: ShadTheme.of(context).colorScheme.foreground,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Tiket ini belum memiliki file lampiran.',
+            style: TextStyle(
+              fontSize: isTablet ? 14 : 13,
+              color: ShadTheme.of(context).colorScheme.mutedForeground,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          if (widget.onAdd != null) ...[
+            SizedBox(height: isTablet ? 24 : 20),
+            ShadButton.outline(
+              size: ShadButtonSize.sm,
+              onPressed: widget.onAdd,
+              child: const Text('Tambah Lampiran Sekarang'),
+            ),
+          ],
+        ],
       ),
     );
   }

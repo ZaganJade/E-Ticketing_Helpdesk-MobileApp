@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:get_it/get_it.dart';
 import '../../../core/theme/shadcn_theme.dart';
+import '../../../core/services/date_service.dart';
 import '../models/notifikasi_model.dart';
 
 class NotifikasiCard extends StatelessWidget {
@@ -15,20 +17,8 @@ class NotifikasiCard extends StatelessWidget {
   });
 
   String _getRelativeTime(DateTime date) {
-    final now = DateTime.now();
-    final diff = now.difference(date);
-
-    if (diff.inDays > 30) {
-      return DateFormat('d MMM yyyy', 'id_ID').format(date);
-    } else if (diff.inDays > 0) {
-      return '${diff.inDays} hari lalu';
-    } else if (diff.inHours > 0) {
-      return '${diff.inHours} jam lalu';
-    } else if (diff.inMinutes > 0) {
-      return '${diff.inMinutes} menit lalu';
-    } else {
-      return 'Baru saja';
-    }
+    final dateService = getIt<DateService>();
+    return dateService.formatRelativeTime(date);
   }
 
   @override

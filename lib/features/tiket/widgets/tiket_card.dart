@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:get_it/get_it.dart';
 import '../../../../core/theme/shadcn_theme.dart';
+import '../../../../core/services/date_service.dart';
 import '../models/tiket_model.dart';
 
 /// Modern Tiket Card Widget - Stylish and Interactive Design
@@ -98,24 +100,13 @@ class _TiketCardState extends State<TiketCard> with SingleTickerProviderStateMix
   }
 
   String _getRelativeTime(DateTime date) {
-    final now = DateTime.now();
-    final diff = now.difference(date);
-
-    if (diff.inDays > 30) {
-      return '${(diff.inDays / 30).floor()}b';
-    } else if (diff.inDays > 0) {
-      return '${diff.inDays}h';
-    } else if (diff.inHours > 0) {
-      return '${diff.inHours}j';
-    } else if (diff.inMinutes > 0) {
-      return '${diff.inMinutes}m';
-    } else {
-      return 'Baru';
-    }
+    final dateService = getIt<DateService>();
+    return dateService.formatRelativeTime(date);
   }
 
   String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+    final dateService = getIt<DateService>();
+    return dateService.formatDate(date);
   }
 
   @override

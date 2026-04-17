@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:get_it/get_it.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/theme/shadcn_theme.dart';
 import '../../../../core/utils/role_utils.dart';
+import '../../../../core/services/date_service.dart';
 import '../../../../shared/widgets/widgets.dart';
 import '../../komentar/presentation/cubit/komentar_cubit.dart';
 import '../../komentar/presentation/widgets/komentar_input.dart';
@@ -50,7 +52,8 @@ class _TiketDetailPageState extends State<TiketDetailPage> {
   }
 
   String _formatDate(DateTime date) {
-    return DateFormat('EEEE, d MMMM yyyy - HH:mm', 'id_ID').format(date);
+    final dateService = getIt<DateService>();
+    return dateService.formatAbsoluteTime(date);
   }
 
   Color _getStatusColor(String status) {
@@ -339,10 +342,7 @@ class _TiketDetailPageState extends State<TiketDetailPage> {
                 ),
                 // Lampiran Section
                 SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                    child: _buildLampiranSection(tiket, isTablet),
-                  ),
+                  child: _buildLampiranSection(tiket, isTablet),
                 ),
                 // Comments Header
                 SliverToBoxAdapter(
@@ -762,81 +762,11 @@ class _TiketDetailPageState extends State<TiketDetailPage> {
   }
 
   Widget _buildLampiranSection(TiketModel tiket, bool isTablet) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      padding: EdgeInsets.all(isTablet ? 24 : 20),
-      decoration: BoxDecoration(
-        color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(isTablet ? 12 : 10),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      ShadcnTheme.accent.withValues(alpha: 0.2),
-                      ShadcnTheme.accent.withValues(alpha: 0.1),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  Icons.attach_file_rounded,
-                  color: ShadcnTheme.accent,
-                  size: isTablet ? 24 : 20,
-                ),
-              ),
-              SizedBox(width: isTablet ? 16 : 12),
-              Text(
-                'Lampiran',
-                style: TextStyle(
-                  fontSize: isTablet ? 18 : 16,
-                  fontWeight: FontWeight.w600,
-                  color: ShadTheme.of(context).colorScheme.foreground,
-                  letterSpacing: -0.3,
-                ),
-              ),
-              const Spacer(),
-              if (tiket.isTerbuka)
-                ShadButton.ghost(
-                  size: ShadButtonSize.sm,
-                  onPressed: () => _showUploadLampiran(tiket.id),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.add, size: 18),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Tambah',
-                        style: TextStyle(
-                          fontSize: isTablet ? 14 : 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-          SizedBox(height: isTablet ? 20 : 16),
-          LampiranList(
-            key: _lampiranListKey,
-            tiketId: widget.tiketId,
-            canDelete: tiket.isTerbuka,
-          ),
-        ],
-      ),
+    return LampiranList(
+      key: _lampiranListKey,
+      tiketId: widget.tiketId,
+      canDelete: tiket.isTerbuka,
+      onAdd: tiket.isTerbuka ? () => _showUploadLampiran(tiket.id) : null,
     );
   }
 }

@@ -394,6 +394,10 @@ class _CreateTiketPageState extends State<CreateTiketPage> {
                           _buildFormCard(context, isTablet),
                           SizedBox(height: isTablet ? 24 : 16),
 
+                          // Lampiran Card (standalone, matching detail page)
+                          _buildLampiranSection(context, isTablet),
+                          SizedBox(height: isTablet ? 24 : 16),
+
                           // Tips Card
                           _buildTipsCard(context, isTablet),
                           SizedBox(height: isTablet ? 32 : 24),
@@ -597,16 +601,14 @@ class _CreateTiketPageState extends State<CreateTiketPage> {
               ),
             ),
           ),
-          SizedBox(height: isTablet ? 20 : 16),
-
-          // Lampiran section
-          _buildLampiranSection(context, isTablet, isDark),
         ],
       ),
     );
   }
 
-  Widget _buildLampiranSection(BuildContext context, bool isTablet, bool isDark) {
+  Widget _buildLampiranSection(BuildContext context, bool isTablet) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: EdgeInsets.all(isTablet ? 24 : 20),
       decoration: BoxDecoration(
@@ -620,7 +622,7 @@ class _CreateTiketPageState extends State<CreateTiketPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header with icon and count
+          // Header — matching detail page style
           Row(
             children: [
               Container(
@@ -634,7 +636,7 @@ class _CreateTiketPageState extends State<CreateTiketPage> {
                       ShadcnTheme.accent.withValues(alpha: 0.1),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   Icons.attach_file_rounded,
@@ -646,9 +648,10 @@ class _CreateTiketPageState extends State<CreateTiketPage> {
               Text(
                 'Lampiran',
                 style: TextStyle(
-                  fontSize: isTablet ? 15 : 14,
-                  fontWeight: FontWeight.w500,
+                  fontSize: isTablet ? 18 : 16,
+                  fontWeight: FontWeight.w600,
                   color: ShadTheme.of(context).colorScheme.foreground,
+                  letterSpacing: -0.3,
                 ),
               ),
               const Spacer(),
@@ -660,7 +663,7 @@ class _CreateTiketPageState extends State<CreateTiketPage> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '$_selectedFiles.length/$_maxFiles',
+                  '${_selectedFiles.length}/$_maxFiles',
                   style: TextStyle(
                     fontSize: isTablet ? 14 : 12,
                     fontWeight: FontWeight.w600,
@@ -670,7 +673,8 @@ class _CreateTiketPageState extends State<CreateTiketPage> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isTablet ? 20 : 16),
+
           // Upload buttons
           LayoutBuilder(
             builder: (context, constraints) {
@@ -741,34 +745,20 @@ class _CreateTiketPageState extends State<CreateTiketPage> {
               );
             },
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isTablet ? 20 : 16),
+
           // Selected files list or empty state
-          if (_selectedFiles.isNotEmpty) ...[
-            const Divider(),
-            const SizedBox(height: 12),
-            Text(
-              'File Terpilih',
-              style: TextStyle(
-                fontSize: isTablet ? 13 : 12,
-                fontWeight: FontWeight.w500,
-                color: ShadTheme.of(context).colorScheme.mutedForeground,
+          if (_selectedFiles.isNotEmpty)
+            ...List.generate(
+              _selectedFiles.length,
+              (index) => _buildFileItem(
+                _selectedFiles[index],
+                index,
+                isTablet,
+                isDark,
               ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: List.generate(
-                _selectedFiles.length,
-                (index) => _buildFileItem(
-                  _selectedFiles[index],
-                  index,
-                  isTablet,
-                  isDark,
-                ),
-              ),
-            ),
-          ] else
+            )
+          else
             _buildEmptyState(isTablet, isDark),
         ],
       ),
@@ -807,79 +797,129 @@ class _CreateTiketPageState extends State<CreateTiketPage> {
     bool isTablet,
     bool isDark,
   ) {
-    final sizeInMB = (file.size / (1024 * 1024)).toStringAsFixed(2);
+    final fileColor = _getFileColor(file.name);
+    final sizeInKB = file.size / 1024;
+    final sizeText = sizeInKB >= 1024
+        ? '${(sizeInKB / 1024).toStringAsFixed(2)} MB'
+        : '${sizeInKB.toStringAsFixed(1)} KB';
+    final ext = file.extension?.toUpperCase() ?? '';
 
     return Container(
-      padding: EdgeInsets.all(isTablet ? 12 : 10),
+      margin: EdgeInsets.only(bottom: isTablet ? 10 : 8),
       decoration: BoxDecoration(
         color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
           width: 1,
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // File icon
-          Icon(
-            _getFileIcon(file.name),
-            size: isTablet ? 20 : 18,
-            color: ShadcnTheme.accent,
-          ),
-          const SizedBox(width: 8),
-          // File info
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: isTablet ? 140 : 100,
-                child: Text(
-                  file.name,
-                  style: TextStyle(
-                    fontSize: isTablet ? 13 : 12,
-                    fontWeight: FontWeight.w500,
-                    color: ShadTheme.of(context).colorScheme.foreground,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            // Left accent bar (matching detail page pattern)
+            Container(
+              width: 4,
+              decoration: BoxDecoration(
+                color: fileColor,
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(12),
                 ),
               ),
-              Text(
-                '$sizeInMB MB',
-                style: TextStyle(
-                  fontSize: isTablet ? 11 : 10,
-                  color: ShadTheme.of(context).colorScheme.mutedForeground,
+            ),
+            // Content
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.all(isTablet ? 16 : 12),
+                child: Row(
+                  children: [
+                    // File icon in gradient circle
+                    Container(
+                      width: isTablet ? 44 : 40,
+                      height: isTablet ? 44 : 40,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            fileColor.withValues(alpha: 0.2),
+                            fileColor.withValues(alpha: 0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        _getFileIcon(file.name),
+                        color: fileColor,
+                        size: isTablet ? 22 : 20,
+                      ),
+                    ),
+                    SizedBox(width: isTablet ? 16 : 12),
+                    // File info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            file.name,
+                            style: TextStyle(
+                              fontSize: isTablet ? 14 : 13,
+                              fontWeight: FontWeight.w600,
+                              color: ShadTheme.of(context).colorScheme.foreground,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            '$sizeText • $ext',
+                            style: TextStyle(
+                              fontSize: isTablet ? 12 : 11,
+                              fontWeight: FontWeight.w400,
+                              color: ShadTheme.of(context).colorScheme.mutedForeground,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Remove button
+                    ShadButton.ghost(
+                      size: ShadButtonSize.sm,
+                      onPressed: () {
+                        setState(() {
+                          _selectedFiles.removeAt(index);
+                        });
+                      },
+                      child: Icon(
+                        Icons.delete_outline_rounded,
+                        size: isTablet ? 20 : 18,
+                        color: ShadcnTheme.destructive,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-          const SizedBox(width: 8),
-          // Remove button
-          ShadButton.ghost(
-            size: ShadButtonSize.sm,
-            onPressed: () {
-              setState(() {
-                _selectedFiles.removeAt(index);
-              });
-            },
-            child: const Icon(Icons.close_rounded, size: 16),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildEmptyState(bool isTablet, bool isDark) {
     return Container(
+      width: double.infinity,
       padding: EdgeInsets.all(isTablet ? 32 : 24),
       decoration: BoxDecoration(
-        color: ShadcnTheme.muted.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(8),
+        color: isDark
+            ? ShadcnTheme.darkBorder.withValues(alpha: 0.3)
+            : ShadcnTheme.muted.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: ShadcnTheme.border.withValues(alpha: 0.5),
+          color: isDark
+              ? ShadcnTheme.darkBorder.withValues(alpha: 0.5)
+              : ShadcnTheme.border.withValues(alpha: 0.5),
           width: 1,
         ),
       ),
@@ -910,6 +950,22 @@ class _CreateTiketPageState extends State<CreateTiketPage> {
         ],
       ),
     );
+  }
+
+  Color _getFileColor(String fileName) {
+    final lower = fileName.toLowerCase();
+    if (_isImageFile(lower)) return const Color(0xFF10B981); // Emerald
+    if (lower.endsWith('.pdf')) return const Color(0xFFEF4444); // Red
+    if (lower.endsWith('.doc') || lower.endsWith('.docx')) {
+      return const Color(0xFF3B82F6); // Blue
+    }
+    if (lower.endsWith('.xls') || lower.endsWith('.xlsx')) {
+      return const Color(0xFF22C55E); // Green
+    }
+    if (lower.endsWith('.ppt') || lower.endsWith('.pptx')) {
+      return const Color(0xFFF97316); // Orange
+    }
+    return const Color(0xFF64748B); // Gray
   }
 
   bool _isImageFile(String fileName) {

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:get_it/get_it.dart';
 import '../../../../core/theme/shadcn_theme.dart';
+import '../../../../core/services/date_service.dart';
 import '../../../auth/domain/entities/pengguna.dart';
 import '../../domain/entities/komentar.dart';
 
@@ -283,17 +285,7 @@ class KomentarCard extends StatelessWidget {
   }
 
   String _formatRelativeTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inDays > 0) {
-      return '${difference.inDays}h lalu';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}j lalu';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m lalu';
-    } else {
-      return 'Baru saja';
-    }
+    final dateService = getIt<DateService>();
+    return dateService.formatRelativeTime(dateTime);
   }
 }

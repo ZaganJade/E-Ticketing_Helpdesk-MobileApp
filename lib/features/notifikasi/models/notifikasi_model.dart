@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/services/date_service.dart';
 
 enum NotifikasiTipe {
   statusChange,
@@ -30,6 +32,7 @@ class NotifikasiModel {
   });
 
   factory NotifikasiModel.fromJson(Map<String, dynamic> json) {
+    final dateService = getIt<DateService>();
     return NotifikasiModel(
       id: json['id'] as String,
       penggunaId: json['pengguna_id'] as String,
@@ -38,11 +41,12 @@ class NotifikasiModel {
       judul: json['judul'] as String,
       pesan: json['pesan'] as String,
       sudahDibaca: json['sudah_dibaca'] as bool,
-      dibuatPada: DateTime.parse(json['dibuat_pada'] as String),
+      dibuatPada: dateService.parseFromDatabase(json['dibuat_pada'] as String),
     );
   }
 
   Map<String, dynamic> toJson() {
+    final dateService = getIt<DateService>();
     return {
       'id': id,
       'pengguna_id': penggunaId,
@@ -51,7 +55,7 @@ class NotifikasiModel {
       'judul': judul,
       'pesan': pesan,
       'sudah_dibaca': sudahDibaca,
-      'dibuat_pada': dibuatPada.toIso8601String(),
+      'dibuat_pada': dateService.formatForDatabase(dibuatPada),
     };
   }
 
