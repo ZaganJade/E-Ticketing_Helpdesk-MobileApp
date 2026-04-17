@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get_it/get_it.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/services/date_service.dart';
 
@@ -32,7 +31,7 @@ class NotifikasiModel {
   });
 
   factory NotifikasiModel.fromJson(Map<String, dynamic> json) {
-    final dateService = getIt<DateService>();
+    final dateTime = DateTime.parse(json['dibuat_pada'] as String);
     return NotifikasiModel(
       id: json['id'] as String,
       penggunaId: json['pengguna_id'] as String,
@@ -41,12 +40,11 @@ class NotifikasiModel {
       judul: json['judul'] as String,
       pesan: json['pesan'] as String,
       sudahDibaca: json['sudah_dibaca'] as bool,
-      dibuatPada: dateService.parseFromDatabase(json['dibuat_pada'] as String),
+      dibuatPada: dateTime, // Store as-is, will be converted to Jakarta time when displayed
     );
   }
 
   Map<String, dynamic> toJson() {
-    final dateService = getIt<DateService>();
     return {
       'id': id,
       'pengguna_id': penggunaId,
@@ -55,7 +53,7 @@ class NotifikasiModel {
       'judul': judul,
       'pesan': pesan,
       'sudah_dibaca': sudahDibaca,
-      'dibuat_pada': dateService.formatForDatabase(dibuatPada),
+      'dibuat_pada': dibuatPada.toIso8601String(),
     };
   }
 

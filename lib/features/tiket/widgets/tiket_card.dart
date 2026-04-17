@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:get_it/get_it.dart';
 import '../../../../core/theme/shadcn_theme.dart';
 import '../../../../core/services/date_service.dart';
 import '../models/tiket_model.dart';
@@ -100,13 +99,11 @@ class _TiketCardState extends State<TiketCard> with SingleTickerProviderStateMix
   }
 
   String _getRelativeTime(DateTime date) {
-    final dateService = getIt<DateService>();
-    return dateService.formatRelativeTime(date);
+    return date.toRelativeTime();
   }
 
   String _formatDate(DateTime date) {
-    final dateService = getIt<DateService>();
-    return dateService.formatDate(date);
+    return date.toFormattedDate();
   }
 
   @override

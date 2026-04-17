@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import 'package:get_it/get_it.dart';
 
 import '../../../../core/theme/shadcn_theme.dart';
 import '../../../../core/services/date_service.dart';
@@ -355,8 +354,7 @@ class _TicketCard extends StatelessWidget {
   }
 
   String _formatDate(DateTime date) {
-    final dateService = getIt<DateService>();
-    return dateService.formatRelativeTime(date);
+    return date.toRelativeTime();
   }
 }
 
