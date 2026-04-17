@@ -9,6 +9,7 @@ export 'di/injection.dart';
 
 // Services
 export 'services/api_service.dart';
+export 'services/date_service.dart';
 export 'services/supabase_service.dart';
 
 // Theme

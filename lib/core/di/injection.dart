@@ -13,6 +13,7 @@ import '../../features/dashboard/presentation/cubit/dashboard_cubit.dart';
 import '../../features/komentar/komentar.dart';
 import '../../features/tiket/tiket.dart';
 import '../services/api_service.dart';
+import '../services/date_service.dart';
 import '../services/supabase_service.dart';
 import '../theme/theme_cubit.dart';
 
@@ -33,6 +34,14 @@ Future<void> initDependencies() async {
           printTime: true,
         ),
       ));
+
+  // Date Service - Jakarta timezone by default
+  getIt.registerLazySingleton<DateService>(
+    () => DateService(
+      timezone: Timezone.jakarta,
+      locale: 'id_ID',
+    ),
+  );
 
   // Secure Storage
   getIt.registerLazySingleton<FlutterSecureStorage>(

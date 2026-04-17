@@ -1,3 +1,6 @@
+import 'package:get_it/get_it.dart';
+import '../../../../core/services/date_service.dart';
+
 class TiketModel {
   final String id;
   final String judul;
@@ -22,6 +25,7 @@ class TiketModel {
   });
 
   factory TiketModel.fromJson(Map<String, dynamic> json) {
+    final dateService = getIt<DateService>();
     final pengguna = json['pengguna'] as Map<String, dynamic>?;
     final penanggungJawab = json['penanggung_jawab'] as Map<String, dynamic>?;
 
@@ -32,13 +36,14 @@ class TiketModel {
       status: json['status'] as String,
       dibuatOleh: json['dibuat_oleh'] as String,
       ditugaskanKepada: json['ditugaskan_kepada'] as String?,
-      dibuatPada: DateTime.parse(json['dibuat_pada'] as String),
+      dibuatPada: dateService.parseFromDatabase(json['dibuat_pada'] as String),
       pembuatNama: pengguna?['nama'] as String?,
       penanggungJawabNama: penanggungJawab?['nama'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() {
+    final dateService = getIt<DateService>();
     return {
       'id': id,
       'judul': judul,
@@ -46,7 +51,7 @@ class TiketModel {
       'status': status,
       'dibuat_oleh': dibuatOleh,
       'ditugaskan_kepada': ditugaskanKepada,
-      'dibuat_pada': dibuatPada.toIso8601String(),
+      'dibuat_pada': dateService.formatForDatabase(dibuatPada),
       'pembuat_nama': pembuatNama,
       'penanggung_jawab_nama': penanggungJawabNama,
     };
