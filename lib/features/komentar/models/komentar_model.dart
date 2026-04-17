@@ -1,4 +1,3 @@
-import 'package:get_it/get_it.dart';
 import '../../../core/services/date_service.dart';
 
 class KomentarModel {
@@ -21,27 +20,26 @@ class KomentarModel {
   });
 
   factory KomentarModel.fromJson(Map<String, dynamic> json) {
-    final dateService = getIt<DateService>();
     // Backend returns flat fields: penulis_nama, penulis_peran
+    final dateTime = DateTime.parse(json['dibuat_pada'] as String);
     return KomentarModel(
       id: json['id'] as String,
       tiketId: json['tiket_id'] as String,
       penulisId: json['penulis_id'] as String,
       isiPesan: json['isi_pesan'] as String,
-      dibuatPada: dateService.parseFromDatabase(json['dibuat_pada'] as String),
+      dibuatPada: dateTime, // Store as-is, will be converted to Jakarta time when displayed
       penulisNama: json['penulis_nama'] as String?,
       penulisPeran: json['penulis_peran'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() {
-    final dateService = getIt<DateService>();
     return {
       'id': id,
       'tiket_id': tiketId,
       'penulis_id': penulisId,
       'isi_pesan': isiPesan,
-      'dibuat_pada': dateService.formatForDatabase(dibuatPada),
+      'dibuat_pada': dibuatPada.toIso8601String(),
       'penulis_nama': penulisNama,
       'penulis_peran': penulisPeran,
     };

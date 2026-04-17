@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:get_it/get_it.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/theme/shadcn_theme.dart';
 import '../../../../core/utils/role_utils.dart';
@@ -52,8 +51,7 @@ class _TiketDetailPageState extends State<TiketDetailPage> {
   }
 
   String _formatDate(DateTime date) {
-    final dateService = getIt<DateService>();
-    return dateService.formatAbsoluteTime(date);
+    return date.toAbsoluteTime();
   }
 
   Color _getStatusColor(String status) {

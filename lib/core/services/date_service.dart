@@ -86,3 +86,43 @@ class DateService {
     return DateTime.parse(isoString);
   }
 }
+
+/// Extension to easily access DateService formatting anywhere
+extension DateServiceExtension on DateTime {
+  /// Format this DateTime as relative time in Indonesian
+  String toRelativeTime() {
+    final jakartaOffset = const Duration(hours: 7);
+    final jakartaTime = this.add(jakartaOffset);
+    final now = DateTime.now().add(jakartaOffset);
+    final diff = now.difference(jakartaTime);
+
+    if (diff.inMinutes < 1) {
+      return 'Baru saja';
+    } else if (diff.inMinutes < 60) {
+      return '${diff.inMinutes} menit lalu';
+    } else if (diff.inHours < 24) {
+      return '${diff.inHours} jam lalu';
+    } else if (diff.inDays < 30) {
+      return '${diff.inDays} hari lalu';
+    } else {
+      // Fall back to absolute format for older dates
+      return toAbsoluteTime();
+    }
+  }
+
+  /// Format this DateTime as absolute time in Indonesian with WIB indicator
+  String toAbsoluteTime() {
+    final jakartaOffset = const Duration(hours: 7);
+    final jakartaTime = this.add(jakartaOffset);
+    final formatter = DateFormat('dd MMMM yyyy, HH:mm', 'id_ID');
+    return '${formatter.format(jakartaTime)} WIB';
+  }
+
+  /// Format this DateTime as date only in Indonesian
+  String toFormattedDate() {
+    final jakartaOffset = const Duration(hours: 7);
+    final jakartaTime = this.add(jakartaOffset);
+    final formatter = DateFormat('dd MMMM yyyy', 'id_ID');
+    return formatter.format(jakartaTime);
+  }
+}
