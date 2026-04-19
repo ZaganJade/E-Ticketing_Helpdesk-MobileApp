@@ -16,12 +16,39 @@ class KomentarModel extends Komentar {
   /// Create KomentarModel from Backend API JSON
   /// Backend returns flat fields: penulis_nama, penulis_peran
   factory KomentarModel.fromJson(Map<String, dynamic> json) {
+    // Handle null or missing penulis_nama with better fallback
+    final penulisNama = json['penulis_nama'] as String?;
+    final penulisPeran = json['penulis_peran'] as String?;
+
+    String finalNama = 'Unknown';
+    Peran finalPeran = Peran.pengguna;
+
+    if (penulisNama != null && penulisNama.isNotEmpty && penulisNama != 'Unknown') {
+      finalNama = penulisNama;
+    } else if (json['pengguna'] is Map) {
+      // Try to get from nested pengguna object
+      final pengguna = json['pengguna'] as Map<String, dynamic>;
+      finalNama = pengguna['nama'] as String? ?? 'Unknown';
+      finalPeran = Peran.fromString(pengguna['peran'] as String? ?? 'pengguna');
+    } else {
+      // Use email if available
+      finalNama = json['email'] as String? ?? 'Unknown';
+    }
+
+    if (penulisPeran != null && penulisPeran.isNotEmpty) {
+      try {
+        finalPeran = Peran.fromString(penulisPeran);
+      } catch (e) {
+        // Keep default if parsing fails
+      }
+    }
+
     return KomentarModel(
       id: json['id'] as String,
       tiketId: json['tiket_id'] as String,
       penulisId: json['penulis_id'] as String,
-      namaPenulis: json['penulis_nama'] as String? ?? 'Unknown',
-      peranPenulis: Peran.fromString(json['penulis_peran'] as String? ?? 'pengguna'),
+      namaPenulis: finalNama,
+      peranPenulis: finalPeran,
       isiPesan: json['isi_pesan'] as String,
       dibuatPada: DateTime.parse(json['dibuat_pada'] as String),
     );

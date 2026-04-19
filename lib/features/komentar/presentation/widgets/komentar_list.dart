@@ -35,8 +35,13 @@ class _KomentarListState extends State<KomentarList> {
       try {
         final cubit = context.read<KomentarCubit>();
         debugPrint('KomentarList: Found KomentarCubit, loading komentar...');
-        cubit.loadKomentar(widget.tiketId);
-        cubit.subscribeToRealtimeUpdates(widget.tiketId);
+        // Load komentar first, then subscribe to updates
+        // This prevents double-loading glitch where polling emits before initial load completes
+        cubit.loadKomentar(widget.tiketId).then((_) {
+          // Subscribe to realtime updates only after initial load completes
+          // Skip initial fetch since data is already loaded
+          cubit.subscribeToRealtimeUpdates(widget.tiketId, skipInitialFetch: true);
+        });
       } catch (e) {
         debugPrint('KomentarList: ERROR - Could not find KomentarCubit: $e');
       }

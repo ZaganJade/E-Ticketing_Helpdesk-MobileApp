@@ -70,9 +70,10 @@ func (h *TiketHandler) CreateTiket(c *gin.Context) {
 	}
 
 	userID := c.GetString("userID")
+	peran := c.GetString("peran")
 	uid := uuid.MustParse(userID)
 
-	fmt.Printf("[DEBUG CREATE TICKET] Creating ticket for user: %s\n", userID)
+	fmt.Printf("[DEBUG CREATE TICKET] Creating ticket for user: %s, role: %s\n", userID, peran)
 	fmt.Printf("[DEBUG CREATE TICKET] Judul: %s\n", judul)
 
 	// Create ticket first
@@ -161,7 +162,7 @@ func (h *TiketHandler) CreateTiket(c *gin.Context) {
 				ContentType: mimeType,
 				Content:     file,
 				DibuatOleh:  uid,
-			})
+			}, entities.Role(peran))
 
 			file.Close()
 

@@ -13,6 +13,9 @@ class AuthRepositoryImpl implements AuthRepository {
   final SupabaseClient _supabaseClient;
   final Logger _logger;
 
+  // Cache for user data to avoid repeated database queries
+  PenggunaModel? _cachedUser;
+
   AuthRepositoryImpl({
     required SupabaseClient supabaseClient,
     Logger? logger,
@@ -41,7 +44,22 @@ class AuthRepositoryImpl implements AuthRepository {
       // Fetch additional user data from pengguna table
       final pengguna = await _fetchUserData(user.id);
 
-      _logger.i('Login successful for user: ${pengguna.id}');
+      // Update Supabase Auth user metadata with nama and peran
+      // This ensures fallback to auth metadata works correctly
+      await _supabaseClient.auth.updateUser(
+        UserAttributes(
+          data: {
+            'nama': pengguna.nama,
+            'peran': pengguna.peran.toString(),
+          },
+        ),
+      );
+      _logger.i('Updated auth metadata: nama=${pengguna.nama}, peran=${pengguna.peran}');
+
+      // Cache the user data
+      _cachedUser = pengguna;
+
+      _logger.i('Login successful for user: ${pengguna.id}, role: ${pengguna.peran}');
       return Right(pengguna);
     } on AuthException catch (e) {
       _logger.e('AuthException during login: ${e.message}');
@@ -105,6 +123,9 @@ class AuthRepositoryImpl implements AuthRepository {
       // Use Supabase Auth SDK for logout
       await _supabaseClient.auth.signOut();
 
+      // Clear cache
+      _cachedUser = null;
+
       _logger.i('Logout successful');
       return const Right(null);
     } on AuthException catch (e) {
@@ -120,13 +141,29 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Pengguna?> getCurrentUser() async {
     try {
       final session = _supabaseClient.auth.currentSession;
-      if (session == null) return null;
+      if (session == null) {
+        _cachedUser = null;
+        return null;
+      }
 
       final user = _supabaseClient.auth.currentUser;
-      if (user == null) return null;
+      if (user == null) {
+        _cachedUser = null;
+        return null;
+      }
+
+      // Return cached user if available and matches current user
+      if (_cachedUser != null && _cachedUser!.id == user.id) {
+        _logger.d('Returning cached user: ${_cachedUser!.nama}, role: ${_cachedUser!.peran}');
+        return _cachedUser;
+      }
 
       // Fetch user data from pengguna table
-      return await _fetchUserData(user.id);
+      _logger.i('Cache miss, fetching user data from database');
+      final userData = await _fetchUserData(user.id);
+      _cachedUser = userData;
+
+      return userData;
     } catch (e) {
       _logger.e('Error getting current user: $e');
       return null;
@@ -176,35 +213,50 @@ class AuthRepositoryImpl implements AuthRepository {
   /// Fetch user data from pengguna table
   Future<PenggunaModel> _fetchUserData(String userId) async {
     try {
+      _logger.i('Fetching user data from pengguna table for user: $userId');
       final response = await _supabaseClient
           .from('pengguna')
           .select()
           .eq('id', userId)
           .maybeSingle();
 
+      _logger.i('Pengguna table query result: ${response != null ? "found" : "not found"}');
+
       // If no user data in pengguna table yet, return default from auth metadata
       if (response == null) {
+        _logger.w('User not found in pengguna table, falling back to auth metadata');
         final authUser = _supabaseClient.auth.currentUser;
+        final metadataNama = authUser?.userMetadata?['nama'] as String?;
+        final metadataPeran = authUser?.userMetadata?['peran'] as String?;
+
+        _logger.i('Auth metadata - nama: $metadataNama, peran: $metadataPeran');
+
         return PenggunaModel(
           id: userId,
-          nama: authUser?.userMetadata?['nama'] ?? 'Pengguna',
+          nama: metadataNama ?? authUser?.email ?? 'Unknown User',
           email: authUser?.email ?? '',
-          peran: Peran.fromString(authUser?.userMetadata?['peran'] ?? 'pengguna'),
+          peran: Peran.fromString(metadataPeran ?? 'pengguna'),
           dibuatPada: DateTime.now(),
           fotoProfil: authUser?.userMetadata?['foto_profil'] as String?,
         );
       }
 
+      _logger.i('Successfully fetched user from pengguna table: nama=${response['nama']}, peran=${response['peran']}');
       return PenggunaModel.fromJson(response);
     } catch (e) {
-      _logger.e('Error fetching user data: $e');
+      _logger.e('Error fetching user data from pengguna table: $e');
       // Return a default user if database fetch fails
       final authUser = _supabaseClient.auth.currentUser;
+      final metadataNama = authUser?.userMetadata?['nama'] as String?;
+      final metadataPeran = authUser?.userMetadata?['peran'] as String?;
+
+      _logger.i('Fallback to auth metadata - nama: $metadataNama, peran: $metadataPeran');
+
       return PenggunaModel(
         id: userId,
-        nama: authUser?.userMetadata?['nama'] ?? 'Pengguna',
+        nama: metadataNama ?? authUser?.email ?? 'Unknown User',
         email: authUser?.email ?? '',
-        peran: Peran.fromString(authUser?.userMetadata?['peran'] ?? 'pengguna'),
+        peran: Peran.fromString(metadataPeran ?? 'pengguna'),
         dibuatPada: DateTime.now(),
         fotoProfil: authUser?.userMetadata?['foto_profil'] as String?,
       );

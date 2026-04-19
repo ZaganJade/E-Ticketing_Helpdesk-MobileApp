@@ -50,7 +50,8 @@ abstract class KomentarRepository {
 
   /// Subscribe to realtime komentar updates for a tiket
   /// Returns a stream of komentar changes
-  Stream<List<Komentar>> subscribeToKomentarUpdates(String tiketId);
+  /// [skipInitialFetch] If true, skip fetching initial data (use when already loaded)
+  Stream<List<Komentar>> subscribeToKomentarUpdates(String tiketId, {bool skipInitialFetch = false});
 
   /// Unsubscribe from realtime updates
   void unsubscribeFromKomentarUpdates();

@@ -36,8 +36,11 @@ class KomentarRepositoryImpl implements KomentarRepository {
 
       final data = response.data;
       if (data == null) {
+        _logger.w('No data received from API');
         return const Right([]);
       }
+
+      _logger.i('API response type: ${data.runtimeType}, data: $data');
 
       final List<dynamic> komentarList;
       if (data is List) {
@@ -45,14 +48,20 @@ class KomentarRepositoryImpl implements KomentarRepository {
       } else if (data['data'] is List) {
         komentarList = data['data'] as List;
       } else {
+        _logger.w('Invalid response format: $data');
         return const Right([]);
       }
 
       final komentars = komentarList
-          .map((json) => KomentarModel.fromJson(json as Map<String, dynamic>))
+          .map((json) {
+            _logger.d('Parsing komentar JSON: $json');
+            final komentar = KomentarModel.fromJson(json as Map<String, dynamic>);
+            _logger.d('Parsed komentar: id=${komentar.id}, nama=${komentar.namaPenulis}, role=${komentar.peranPenulis}');
+            return komentar;
+          })
           .toList();
 
-      _logger.i('Fetched ${komentars.length} komentar');
+      _logger.i('Fetched ${komentars.length} komentar successfully');
       return Right(komentars);
     } on Exception catch (e) {
       _logger.e('Error fetching komentar: $e');
@@ -113,8 +122,8 @@ class KomentarRepositoryImpl implements KomentarRepository {
   }
 
   @override
-  Stream<List<Komentar>> subscribeToKomentarUpdates(String tiketId) {
-    _logger.i('Subscribing to komentar updates for tiket: $tiketId (using polling)');
+  Stream<List<Komentar>> subscribeToKomentarUpdates(String tiketId, {bool skipInitialFetch = false}) {
+    _logger.i('Subscribing to komentar updates for tiket: $tiketId (using polling), skipInitialFetch: $skipInitialFetch');
 
     // Unsubscribe from previous if exists
     unsubscribeFromKomentarUpdates();
@@ -123,8 +132,11 @@ class KomentarRepositoryImpl implements KomentarRepository {
     final controller = StreamController<List<Komentar>>.broadcast();
     _streamControllers[tiketId] = controller;
 
-    // Fetch initial data
-    _fetchAndEmitKomentarList(tiketId);
+    // Fetch initial data only if not skipping
+    // This prevents double-loading when widget already loaded data
+    if (!skipInitialFetch) {
+      _fetchAndEmitKomentarList(tiketId);
+    }
 
     // Set up polling (every 5 seconds)
     _pollingTimers[tiketId] = Timer.periodic(
