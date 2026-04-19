@@ -14,10 +14,11 @@ type UploadLampiranInput struct {
 	TiketID     uuid.UUID
 	NamaFile    string
 	Ukuran      int64
-	TipeFile    string   
-	ContentType string   
-	Content     any      
+	TipeFile    string
+	ContentType string
+	Content     any
 	DibuatOleh  uuid.UUID
+	UserRole    entities.Role // Added for authorization check
 }
 
 type UploadLampiranOutput struct {
@@ -36,13 +37,25 @@ func NewUploadLampiranUseCase(lampiranRepo interfaces.LampiranRepository, tiketR
 	}
 }
 
-func (uc *UploadLampiranUseCase) Execute(ctx context.Context, input UploadLampiranInput) (*UploadLampiranOutput, error) {
-	fmt.Printf("[DEBUG UC] Starting upload for ticket %s, file: %s, content nil: %v\n", input.TiketID, input.NamaFile, input.Content == nil)
+func (uc *UploadLampiranUseCase) Execute(ctx context.Context, input UploadLampiranInput, userRole entities.Role) (*UploadLampiranOutput, error) {
+	fmt.Printf("[DEBUG UC] Starting upload for ticket %s, file: %s, user role: %s, content nil: %v\n", input.TiketID, input.NamaFile, userRole, input.Content == nil)
 
-	_, err := uc.tiketRepo.GetByID(ctx, input.TiketID)
+	// Get ticket details for authorization check
+	tiket, err := uc.tiketRepo.GetByID(ctx, input.TiketID)
 	if err != nil {
 		fmt.Printf("[DEBUG UC] Ticket not found: %v\n", err)
 		return nil, err
+	}
+
+	// Authorization check: Users can only upload attachments to tickets they have access to
+	// Rule: Each role can only upload lampiran to tickets they created
+	// - Pengguna can upload to their own tickets (tickets where DibuatOleh == userID)
+	// - Helpdesk can upload to their own tickets (tickets where DibuatOleh == userID)
+	// - Admin can upload to any ticket
+	if userRole != entities.RoleAdmin {
+		if tiket.DibuatOleh != input.DibuatOleh {
+			return nil, entities.ErrUnauthorized
+		}
 	}
 
 	lampiran, err := entities.NewLampiran(input.TiketID, input.NamaFile, input.Ukuran, input.TipeFile, input.DibuatOleh)

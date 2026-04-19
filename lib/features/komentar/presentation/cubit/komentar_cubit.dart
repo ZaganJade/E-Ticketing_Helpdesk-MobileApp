@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:logger/logger.dart';
@@ -34,27 +33,57 @@ class KomentarCubit extends Cubit<KomentarState> {
     _currentTiketId = tiketId;
     emit(const KomentarLoading());
 
+    final currentUser = await _authRepository.getCurrentUser();
+
+    _logger.i('Current user: ${currentUser?.nama}, role: ${currentUser?.peran}');
+
+    // Then fetch komentar
     final result = await _komentarRepository.getKomentarByTiketId(tiketId);
 
     result.fold(
-      (failure) => emit(KomentarError(failure.message)),
-      (komentarList) => emit(KomentarLoaded(
-        komentarList: komentarList,
-        hasNewKomentar: false,
-      )),
+      (failure) {
+        _logger.e('Failed to load komentar: ${failure.message}');
+        emit(KomentarError(failure.message));
+      },
+      (komentarList) {
+        _logger.i('Loaded ${komentarList.length} komentar');
+
+        // Fix any "Unknown" names immediately with user data we already have
+        final fixedList = komentarList.map((k) {
+          if ((k.namaPenulis == 'Unknown' || k.namaPenulis.isEmpty) && currentUser != null && k.penulisId == currentUser.id) {
+            _logger.i('Fixing komentar ${k.id} immediately: ${k.namaPenulis} -> ${currentUser.nama}');
+            return k.copyWith(
+              namaPenulis: currentUser.nama,
+              peranPenulis: currentUser.peran,
+            );
+          }
+          return k;
+        }).toList();
+
+        // Log each komentar for debugging
+        for (var i = 0; i < fixedList.length && i < 3; i++) {
+          _logger.d('Final komentar $i: id=${fixedList[i].id}, nama=${fixedList[i].namaPenulis}, role=${fixedList[i].peranPenulis}');
+        }
+
+        emit(KomentarLoaded(
+          komentarList: fixedList,
+          hasNewKomentar: false,
+        ));
+      },
     );
   }
 
   /// Subscribe to realtime updates via polling (Backend API doesn't have realtime)
-  void subscribeToRealtimeUpdates(String tiketId) {
-    _logger.i('Setting up polling subscription for tiket: $tiketId');
+  /// [skipInitialFetch] If true, skip fetching initial data from server
+  void subscribeToRealtimeUpdates(String tiketId, {bool skipInitialFetch = true}) {
+    _logger.i('Setting up polling subscription for tiket: $tiketId, skipInitialFetch: $skipInitialFetch');
 
     // Clean up existing subscription
     _unsubscribeFromRealtimeUpdates();
 
     // Subscribe to repository's polling stream
     _komentarSubscription = _komentarRepository
-        .subscribeToKomentarUpdates(tiketId)
+        .subscribeToKomentarUpdates(tiketId, skipInitialFetch: skipInitialFetch)
         .listen(
           (komentarList) {
             _logger.i('Received ${komentarList.length} komentar via polling');
@@ -70,6 +99,11 @@ class KomentarCubit extends Cubit<KomentarState> {
   void _handleUpdatedKomentarList(List<Komentar> komentarList) {
     final currentState = state;
     _logger.d('Polling received ${komentarList.length} komentar, current state: ${currentState.runtimeType}');
+
+    // Log each komentar for debugging
+    for (var i = 0; i < komentarList.length && i < 3; i++) {
+      _logger.d('Komentar $i: id=${komentarList[i].id}, nama=${komentarList[i].namaPenulis}, role=${komentarList[i].peranPenulis}');
+    }
 
     if (currentState is! KomentarLoaded) {
       // Initial load
@@ -121,8 +155,26 @@ class KomentarCubit extends Cubit<KomentarState> {
         newKomentarId: newKomentar.isNotEmpty ? newKomentar.last.id : null,
       ));
     } else {
-      // No changes - don't emit to avoid unnecessary rebuilds
-      _logger.d('No changes from polling, skipping emit');
+      // Also check if any existing komentar had their names fixed (e.g., from "Unknown" to actual name)
+      final hasNameChanges = komentarList.any((k) {
+        final existing = currentState.komentarList.firstWhere(
+          (e) => e.id == k.id,
+          orElse: () => k,
+        );
+        return (existing.namaPenulis == 'Unknown' || existing.namaPenulis.isEmpty) &&
+               (k.namaPenulis != 'Unknown' && k.namaPenulis.isNotEmpty);
+      });
+
+      if (hasNameChanges) {
+        _logger.i('Polling: Found name fixes in existing komentar, updating state');
+        emit(KomentarLoaded(
+          komentarList: komentarList,
+          hasNewKomentar: false,
+        ));
+      } else {
+        // No changes - don't emit to avoid unnecessary rebuilds
+        _logger.d('No changes from polling, skipping emit');
+      }
     }
   }
 
@@ -184,19 +236,42 @@ class KomentarCubit extends Cubit<KomentarState> {
 
     // Get current user info from database via AuthRepository
     final currentUser = await _authRepository.getCurrentUser();
-    final userName = currentUser?.nama ?? 'Unknown';
-    final userId = currentUser?.id ?? Supabase.instance.client.auth.currentUser?.id ?? 'current_user';
+    final authUser = Supabase.instance.client.auth.currentUser;
 
-    _logger.i('Current user from DB: $userId, name: $userName');
+    // Try to get data from database first, then fallback to auth metadata
+    String userName = 'Unknown';
+    String userId = 'current_user';
+    Peran userRole = Peran.pengguna;
 
-    // Optimistic update - add placeholder immediately
+    if (currentUser != null && currentUser.nama.isNotEmpty) {
+      userName = currentUser.nama;
+      userId = currentUser.id;
+      userRole = currentUser.peran;
+      _logger.i('Got user from database: $userId, name: $userName, role: $userRole');
+    } else if (authUser != null) {
+      userId = authUser.id;
+      // Try to get from auth metadata
+      userName = authUser.userMetadata?['nama'] as String? ??
+                  authUser.email ??
+                  'Unknown';
+      userRole = Peran.fromString(
+        authUser.userMetadata?['peran'] as String? ?? 'pengguna'
+      );
+      _logger.i('Got user from auth metadata: $userId, name: $userName, role: $userRole');
+    } else {
+      _logger.w('No user data available, komentar will show Unknown');
+    }
+
+    _logger.i('Final optimistic data: $userId, name: $userName, role: $userRole');
+
+    // Optimistic update - add placeholder immediately with correct role
     final optimisticKomentar = Komentar(
       id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
       tiketId: tiketId,
       isiPesan: isiPesan,
       penulisId: userId,
       namaPenulis: userName,
-      peranPenulis: Peran.pengguna, // Will be determined by backend
+      peranPenulis: userRole, // Use actual user role for correct display
       dibuatPada: DateTime.now(),
     );
 
@@ -238,14 +313,12 @@ class KomentarCubit extends Cubit<KomentarState> {
         // Don't emit error state - just log the error
       },
       (komentar) {
-        _logger.i('Success - Server returned komentar: id=${komentar.id}, namaPenulis=${komentar.namaPenulis}');
+        _logger.i('Success - Server returned komentar: id=${komentar.id}, namaPenulis=${komentar.namaPenulis}, peranPenulis=${komentar.peranPenulis}');
 
-        // If server returns 'Unknown' or empty, use the optimistic name we already showed
-        final effectiveKomentar = (komentar.namaPenulis == 'Unknown' || komentar.namaPenulis.isEmpty)
-            ? komentar.copyWith(namaPenulis: userName)
-            : komentar;
+        // Use server response as the authoritative source - it has the correct role from backend
+        final effectiveKomentar = komentar;
 
-        // Replace optimistic komentar with real one
+        // Replace optimistic komentar with real one from server
         final latestState = state;
         if (latestState is KomentarLoaded) {
           final updatedList = latestState.komentarList

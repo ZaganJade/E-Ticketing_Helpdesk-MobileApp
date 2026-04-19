@@ -22,6 +22,9 @@ class AuthInterceptor extends Interceptor {
 
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
+      _logger.d('[AUTH] Adding Authorization header (token length: ${token.length})');
+    } else {
+      _logger.w('[AUTH] No token available for request to ${options.uri}');
     }
 
     handler.next(options);

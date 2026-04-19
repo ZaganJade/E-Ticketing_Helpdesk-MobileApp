@@ -47,8 +47,9 @@ func (r *SupabaseTiketRepository) Create(ctx context.Context, tiket *entities.Ti
 
 // GetByID retrieves a ticket by ID with user info
 func (r *SupabaseTiketRepository) GetByID(ctx context.Context, id uuid.UUID) (*entities.Tiket, error) {
+	// Get tiket without join to avoid RLS issues
 	query := r.client.GetTable("tiket").
-		Select("*, pengguna:dibuat_oleh(nama), assigned:pengguna!tiket_ditugaskan_kepada_fkey(nama)", "", false).
+		Select("*", "", false).
 		Eq("id", id.String()).
 		Single()
 
@@ -60,14 +61,37 @@ func (r *SupabaseTiketRepository) GetByID(ctx context.Context, id uuid.UUID) (*e
 		return nil, fmt.Errorf("failed to get ticket: %w", err)
 	}
 
-	return r.parseTiket(resp)
+	// Parse tiket without user info first
+	tiket, err := r.parseTiketWithoutUser(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch pengguna data separately if needed
+	if tiket.DibuatOleh != (uuid.UUID{}) {
+		penggunaResp, _, err := r.client.GetTable("pengguna").
+			Select("nama", "", false).
+			Eq("id", tiket.DibuatOleh.String()).
+			Single().
+			Execute()
+		if err == nil {
+			var pengguna map[string]interface{}
+			if err := json.Unmarshal(penggunaResp, &pengguna); err == nil {
+				if nama, ok := pengguna["nama"].(string); ok {
+					tiket.Pengguna = &entities.PenggunaInfo{Nama: nama}
+				}
+			}
+		}
+	}
+
+	return tiket, nil
 }
 
 // GetByIDWithRelations retrieves ticket with creator and assignee info
 func (r *SupabaseTiketRepository) GetByIDWithRelations(ctx context.Context, id uuid.UUID) (*entities.Tiket, error) {
-	// Use Supabase's foreign table selection
+	// Get tiket without join to avoid RLS issues
 	query := r.client.GetTable("tiket").
-		Select("*, pengguna:dibuat_oleh(nama, peran), assigned:pengguna!tiket_ditugaskan_kepada_fkey(nama, peran)", "", false).
+		Select("*", "", false).
 		Eq("id", id.String()).
 		Single()
 
@@ -79,12 +103,36 @@ func (r *SupabaseTiketRepository) GetByIDWithRelations(ctx context.Context, id u
 		return nil, fmt.Errorf("failed to get ticket with relations: %w", err)
 	}
 
-	return r.parseTiket(resp)
+	// Parse tiket without user info first
+	tiket, err := r.parseTiketWithoutUser(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch pengguna data separately
+	if tiket.DibuatOleh != (uuid.UUID{}) {
+		penggunaResp, _, err := r.client.GetTable("pengguna").
+			Select("nama, peran", "", false).
+			Eq("id", tiket.DibuatOleh.String()).
+			Single().
+			Execute()
+		if err == nil {
+			var pengguna map[string]interface{}
+			if err := json.Unmarshal(penggunaResp, &pengguna); err == nil {
+				if nama, ok := pengguna["nama"].(string); ok {
+					tiket.Pengguna = &entities.PenggunaInfo{Nama: nama}
+				}
+			}
+		}
+	}
+
+	return tiket, nil
 }
 
 // List retrieves tickets with filter and pagination
 func (r *SupabaseTiketRepository) List(ctx context.Context, filter interfaces.TiketFilter, offset, limit int) ([]*entities.Tiket, error) {
-	query := r.client.GetTable("tiket").Select("*, pengguna:dibuat_oleh(nama), assigned:pengguna!tiket_ditugaskan_kepada_fkey(nama)", "", false)
+	// Get tiket without join to avoid RLS issues
+	query := r.client.GetTable("tiket").Select("*", "", false)
 
 	// Apply filters
 	if filter.Status != nil {
@@ -114,14 +162,71 @@ func (r *SupabaseTiketRepository) List(ctx context.Context, filter interfaces.Ti
 		return nil, fmt.Errorf("failed to list tickets: %w", err)
 	}
 
-	return r.parseTiketList(resp)
+	// Parse tiket list
+	tickets, err := r.parseTiketList(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch pengguna data for all tickets
+	userIDs := make([]uuid.UUID, 0, len(tickets))
+	for _, ticket := range tickets {
+		if ticket.DibuatOleh != (uuid.UUID{}) {
+			userIDs = append(userIDs, ticket.DibuatOleh)
+		}
+	}
+
+	// Get pengguna data in batch using IN clause (optimized)
+	if len(userIDs) > 0 {
+		// Deduplicate user IDs
+		uniqueUserIDs := make(map[string]bool)
+		userIDStrings := make([]string, 0, len(userIDs))
+		for _, uid := range userIDs {
+			uidStr := uid.String()
+			if !uniqueUserIDs[uidStr] {
+				uniqueUserIDs[uidStr] = true
+				userIDStrings = append(userIDStrings, uidStr)
+			}
+		}
+
+		// Single query to fetch all pengguna data at once
+		penggunaMap := make(map[string]map[string]interface{})
+		if len(userIDStrings) > 0 {
+			penggunaResp, _, err := r.client.GetTable("pengguna").
+				Select("id, nama, peran", "", false).
+				In("id", userIDStrings).
+				Execute()
+
+			if err == nil {
+				var penggunaList []map[string]interface{}
+				if err := json.Unmarshal(penggunaResp, &penggunaList); err == nil {
+					for _, pengguna := range penggunaList {
+						if id, ok := pengguna["id"].(string); ok {
+							penggunaMap[id] = pengguna
+						}
+					}
+				}
+			}
+		}
+
+		// Merge pengguna data into tickets
+		for _, ticket := range tickets {
+			if p, ok := penggunaMap[ticket.DibuatOleh.String()]; ok {
+				if nama, ok := p["nama"].(string); ok {
+					ticket.Pengguna = &entities.PenggunaInfo{Nama: nama}
+				}
+			}
+		}
+	}
+
+	return tickets, nil
 }
 
 // Count returns total tickets matching filter
 func (r *SupabaseTiketRepository) Count(ctx context.Context, filter interfaces.TiketFilter) (int64, error) {
 	query := r.client.GetTable("tiket").Select("*", "exact", false)
 
-	// Apply filters
+	// Apply filters (same as List method for consistency)
 	if filter.Status != nil {
 		query = query.Eq("status", string(*filter.Status))
 	}
@@ -132,21 +237,20 @@ func (r *SupabaseTiketRepository) Count(ctx context.Context, filter interfaces.T
 		query = query.Eq("ditugaskan_kepada", filter.DitugaskanKepada.String())
 	}
 
-	resp, count, err := query.Execute()
+	_, count, err := query.Execute()
 	if err != nil {
 		return 0, fmt.Errorf("failed to count tickets: %w", err)
 	}
 
-	_ = resp
 	return count, nil
 }
 
 // Update updates ticket data
 func (r *SupabaseTiketRepository) Update(ctx context.Context, tiket *entities.Tiket) error {
 	data := map[string]interface{}{
-		"judul":       tiket.Judul,
-		"deskripsi":   tiket.Deskripsi,
-		"status":      tiket.Status,
+		"judul":         tiket.Judul,
+		"deskripsi":      tiket.Deskripsi,
+		"status":         tiket.Status,
 		"diperbarui_pada": tiket.DiperbaruiPada,
 	}
 
@@ -304,6 +408,14 @@ func (r *SupabaseTiketRepository) parseTiket(data []byte) (*entities.Tiket, erro
 	return &t, nil
 }
 
+func (r *SupabaseTiketRepository) parseTiketWithoutUser(data []byte) (*entities.Tiket, error) {
+	var t entities.Tiket
+	if err := json.Unmarshal(data, &t); err != nil {
+		return nil, fmt.Errorf("failed to parse ticket: %w", err)
+	}
+	return &t, nil
+}
+
 func (r *SupabaseTiketRepository) parseTiketList(data []byte) ([]*entities.Tiket, error) {
 	var tickets []*entities.Tiket
 	if err := json.Unmarshal(data, &tickets); err != nil {
@@ -311,4 +423,3 @@ func (r *SupabaseTiketRepository) parseTiketList(data []byte) ([]*entities.Tiket
 	}
 	return tickets, nil
 }
-

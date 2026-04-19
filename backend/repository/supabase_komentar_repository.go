@@ -42,8 +42,9 @@ func (r *SupabaseKomentarRepository) Create(ctx context.Context, komentar *entit
 
 // GetByID retrieves a comment by ID
 func (r *SupabaseKomentarRepository) GetByID(ctx context.Context, id uuid.UUID) (*entities.Komentar, error) {
+	// Get komentar without join to avoid RLS issues
 	query := r.client.GetTable("komentar").
-		Select("*, pengguna!inner(nama, peran)", "", false).
+		Select("*", "", false).
 		Eq("id", id.String()).
 		Single()
 
@@ -55,13 +56,85 @@ func (r *SupabaseKomentarRepository) GetByID(ctx context.Context, id uuid.UUID) 
 		return nil, fmt.Errorf("failed to get comment: %w", err)
 	}
 
-	return r.parseKomentar(resp)
+	// Parse komentar
+	var raw map[string]interface{}
+	if err := json.Unmarshal(resp, &raw); err != nil {
+		return nil, fmt.Errorf("failed to parse comment: %w", err)
+	}
+
+	// Parse basic fields
+	komentarID, _ := uuid.Parse(raw["id"].(string))
+	tiketID, _ := uuid.Parse(raw["tiket_id"].(string))
+	penulisID, _ := uuid.Parse(raw["penulis_id"].(string))
+	dibuatPada, _ := time.Parse(time.RFC3339, raw["dibuat_pada"].(string))
+
+	// Get pengguna data separately
+	var nama string = "Unknown"
+	var peranStr string = "pengguna"
+
+	queryBuilder := r.client.GetTable("pengguna").
+		Select("nama, peran", "", false).
+		Eq("id", penulisID.String()).
+		Single()
+
+	penggunaResp, _, err := queryBuilder.Execute()
+	if err != nil {
+		// Log error when pengguna query fails
+		// This can happen due to RLS or other issues
+		fmt.Printf("Warning: Failed to fetch pengguna for komentar %s: %v\n", penulisID.String(), err)
+	}
+
+	if err == nil {
+		var pengguna map[string]interface{}
+		if err := json.Unmarshal(penggunaResp, &pengguna); err == nil {
+			if n, ok := pengguna["nama"].(string); ok && n != "" {
+				nama = n
+			}
+			if r, ok := pengguna["peran"].(string); ok && r != "" {
+				peranStr = r
+			}
+		}
+	}
+
+	return &entities.Komentar{
+		ID:           komentarID,
+		TiketID:      tiketID,
+		PenulisID:    penulisID,
+		IsiPesan:     raw["isi_pesan"].(string),
+		DibuatPada:   dibuatPada,
+		PenulisNama:  nama,
+		PenulisPeran: entities.Role(peranStr),
+	}, nil
 }
 
 // GetByTiketID retrieves all comments for a ticket
 func (r *SupabaseKomentarRepository) GetByTiketID(ctx context.Context, tiketID uuid.UUID) ([]*entities.Komentar, error) {
+	// Use LEFT JOIN instead of INNER JOIN to get all comments even if pengguna data is missing
+	// Use RPC to bypass RLS issues with joins
+	penggunaMap := make(map[string]map[string]interface{})
+
+	// First, get all pengguna data that are potential comment authors
+	penggunaResp, _, err := r.client.GetTable("pengguna").
+		Select("id, nama, peran", "", false).
+		Execute()
+
+	if err == nil {
+		var penggunaList []map[string]interface{}
+		if err := json.Unmarshal(penggunaResp, &penggunaList); err == nil {
+			for _, p := range penggunaList {
+				if id, ok := p["id"].(string); ok {
+					penggunaMap[id] = p
+				}
+			}
+		}
+	} else {
+		// Log error for debugging - pengguna data might be missing
+		fmt.Printf("Warning: Failed to fetch pengguna data: %v\n", err)
+	}
+
+	// Then get komentar without join to avoid RLS issues
 	query := r.client.GetTable("komentar").
-		Select("*, pengguna!inner(nama, peran)", "", false).
+		Select("*", "", false).
 		Eq("tiket_id", tiketID.String()).
 		Order("dibuat_pada", &postgrest.OrderOpts{Ascending: true})
 
@@ -70,7 +143,55 @@ func (r *SupabaseKomentarRepository) GetByTiketID(ctx context.Context, tiketID u
 		return nil, fmt.Errorf("failed to get comments: %w", err)
 	}
 
-	return r.parseKomentarList(resp)
+	// Parse komentar and merge with pengguna data
+	var rawList []map[string]interface{}
+	if err := json.Unmarshal(resp, &rawList); err != nil {
+		return nil, fmt.Errorf("failed to parse comments: %w", err)
+	}
+
+	comments := make([]*entities.Komentar, 0, len(rawList))
+	for _, raw := range rawList {
+		// Parse basic fields
+		id, _ := uuid.Parse(raw["id"].(string))
+		tiketID, _ := uuid.Parse(raw["tiket_id"].(string))
+		penulisID, _ := uuid.Parse(raw["penulis_id"].(string))
+		dibuatPada, _ := time.Parse(time.RFC3339, raw["dibuat_pada"].(string))
+
+		// Get pengguna data from map
+		nama := "Unknown"
+		peranStr := "pengguna"
+		if p, ok := penggunaMap[penulisID.String()]; ok {
+			if n, ok := p["nama"].(string); ok && n != "" {
+				nama = n
+			}
+			if r, ok := p["peran"].(string); ok && r != "" {
+				peranStr = r
+			}
+		}
+
+		comments = append(comments, &entities.Komentar{
+			ID:           id,
+			TiketID:      tiketID,
+			PenulisID:    penulisID,
+			IsiPesan:     raw["isi_pesan"].(string),
+			DibuatPada:   dibuatPada,
+			PenulisNama:  nama,
+			PenulisPeran: entities.Role(peranStr),
+		})
+	}
+
+	// Log how many comments have unknown names for debugging
+	unknownCount := 0
+	for _, c := range comments {
+		if c.PenulisNama == "Unknown" {
+			unknownCount++
+		}
+	}
+	if unknownCount > 0 {
+		fmt.Printf("Warning: %d comments have unknown penulis_nama out of %d total\n", unknownCount, len(comments))
+	}
+
+	return comments, nil
 }
 
 // Delete deletes a comment
@@ -97,7 +218,6 @@ func (r *SupabaseKomentarRepository) CountByTiketID(ctx context.Context, tiketID
 	if err != nil {
 		return 0, fmt.Errorf("failed to count comments: %w", err)
 	}
-
 	_ = resp
 	return count, nil
 }
@@ -149,8 +269,8 @@ func (r *SupabaseKomentarRepository) convertToEntity(raw *komentarWithPengguna) 
 		if n, ok := raw.Pengguna["nama"].(string); ok && n != "" {
 			nama = n
 		}
-		if p, ok := raw.Pengguna["peran"].(string); ok && p != "" {
-			peranStr = p
+		if r, ok := raw.Pengguna["peran"].(string); ok && r != "" {
+			peranStr = r
 		}
 	}
 

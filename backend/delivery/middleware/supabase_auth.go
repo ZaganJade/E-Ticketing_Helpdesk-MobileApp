@@ -215,7 +215,6 @@ func (m *SupabaseAuthMiddleware) RequireAuth() gin.HandlerFunc {
 		// Get token from header
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			log.Println("[AUTH] No Authorization header")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
 			c.Abort()
 			return
@@ -224,7 +223,6 @@ func (m *SupabaseAuthMiddleware) RequireAuth() gin.HandlerFunc {
 		// Extract bearer token
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			log.Println("[AUTH] Invalid authorization header format")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization header format"})
 			c.Abort()
 			return
@@ -236,12 +234,11 @@ func (m *SupabaseAuthMiddleware) RequireAuth() gin.HandlerFunc {
 		// Verify token
 		claims, err := m.VerifyJWT(token)
 		if err != nil {
-			log.Printf("[AUTH] JWT verification failed: %v", err)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token", "details": err.Error()})
 			c.Abort()
 			return
 		}
-		log.Printf("[AUTH] JWT verified successfully for user: %s", claims.Sub)
+		log.Printf("[AUTH] JWT verified successfully for user: %s, email: %s", claims.Sub, claims.Email)
 
 		// Parse user ID
 		userID, err := uuid.Parse(claims.Sub)

@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"context"
+	"log"
 
 	"github.com/google/uuid"
 	"eticketinghelpdesk/entities"
@@ -34,33 +35,73 @@ func NewGetTiketListUseCase(tiketRepo interfaces.TiketRepository) *GetTiketListU
 	return &GetTiketListUseCase{tiketRepo: tiketRepo}
 }
 
-// Execute retrieves ticket list based on filters
+// Execute retrieves ticket list based on filters (optimized)
 func (uc *GetTiketListUseCase) Execute(ctx context.Context, input GetTiketListInput) (*GetTiketListOutput, error) {
+	// Debug logging (reduced for performance)
+	log.Printf("[TICKET LIST] User: %s, Role: %s", input.UserID, input.UserRole)
+
 	// Build filter based on user role
 	filter := interfaces.TiketFilter{
 		Status:      input.Status,
 		SearchQuery: input.SearchQuery,
 	}
 
+	// Apply filter based on user role (following same pattern as dashboard stats)
+	// Helpdesk and Admin can see all tickets
 	// Regular users can only see their own tickets
-	if input.UserRole == entities.RolePengguna {
+	if input.UserRole == entities.RoleHelpdesk || input.UserRole == entities.RoleAdmin {
+		// Helpdesk and Admin see all tickets - no DibuatOleh filter
+		log.Printf("[TICKET LIST] %s user - accessing all tickets", input.UserRole)
+	} else {
+		// Regular users (and unknown roles for safety) see only their own tickets
 		filter.DibuatOleh = &input.UserID
 	}
-	// Helpdesk can see all tickets (optionally filtered by assignment)
-	if input.UserRole == entities.RoleHelpdesk {
-		// Could add filter for assigned tickets only
+
+	// Execute queries in parallel for better performance
+	type result struct {
+		tikets []*entities.Tiket
+		total  int64
+		err    error
 	}
 
-	// Get tickets
-	tikets, err := uc.tiketRepo.List(ctx, filter, input.Offset, input.Limit)
-	if err != nil {
-		return nil, err
+	resultChan := make(chan result, 2)
+
+	// Fetch tickets
+	go func() {
+		t, e := uc.tiketRepo.List(ctx, filter, input.Offset, input.Limit)
+		resultChan <- result{tikets: t, err: e}
+	}()
+
+	// Fetch count
+	go func() {
+		c, e := uc.tiketRepo.Count(ctx, filter)
+		resultChan <- result{total: c, err: e}
+	}()
+
+	// Collect results
+	var tikets []*entities.Tiket
+	var total int64
+	var tiketsErr, countErr error
+
+	for i := 0; i < 2; i++ {
+		r := <-resultChan
+		if r.tikets != nil {
+			tikets = r.tikets
+			tiketsErr = r.err
+		}
+		if r.err != nil {
+			countErr = r.err
+		} else {
+			total = r.total
+		}
 	}
 
-	// Get total count
-	total, err := uc.tiketRepo.Count(ctx, filter)
-	if err != nil {
-		return nil, err
+	// Handle errors - prioritize tiket error over count error
+	if tiketsErr != nil {
+		return nil, tiketsErr
+	}
+	if countErr != nil {
+		return nil, countErr
 	}
 
 	return &GetTiketListOutput{
