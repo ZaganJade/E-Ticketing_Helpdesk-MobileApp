@@ -760,8 +760,8 @@ git commit -m "feat(assign): admin-only assignment with free-helpdesk check and 
 
 **Files:**
 - Create: `backend/usecases/unassign_tiket_usecase.go`
-- Modify: `backend/main.go` (add wiring line)
 - Test: `backend/usecases/unassign_tiket_usecase_test.go` (create)
+- (Note: `main.go` wiring is intentionally NOT done here — see Step 4.)
 
 **Interfaces:**
 - Consumes: `fakeTiketRepo`, `fakeNotifikasiRepo`; `tiketRepo.Unassign` (Task 2).
@@ -916,15 +916,9 @@ func (uc *UnassignTiketUseCase) Execute(ctx context.Context, input UnassignTiket
 }
 ```
 
-- [ ] **Step 4: Wire in main.go**
+- [ ] **Step 4: (no main.go change in this task)**
 
-In `backend/main.go`, after the `assignTiketUC := ...` line, add:
-
-```go
-	unassignTiketUC := usecases.NewUnassignTiketUseCase(tiketRepo, notifikasiRepo)
-```
-
-(`unassignTiketUC` is consumed by the handler in Task 9. If your editor/linter flags it as unused before Task 9, complete Task 9 in the same working session — it is wired there.)
+Do NOT wire `unassignTiketUC` into `main.go` here. Adding the constructor now would leave an unused local variable — a Go **compile error** — until the handler consumes it in Task 9, which would break the `go build ./...` checks in Tasks 6 and 8. All wiring for this usecase happens in Task 9.
 
 - [ ] **Step 5: Run tests**
 
@@ -934,7 +928,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/usecases/unassign_tiket_usecase.go backend/usecases/unassign_tiket_usecase_test.go backend/main.go
+git add backend/usecases/unassign_tiket_usecase.go backend/usecases/unassign_tiket_usecase_test.go
 git commit -m "feat(unassign): admin pull-back of a ticket to the pool"
 ```
 
@@ -1057,8 +1051,8 @@ git commit -m "feat(list): helpdesk sees only tickets assigned to them"
 
 **Files:**
 - Create: `backend/usecases/list_available_helpdesk_usecase.go`
-- Modify: `backend/main.go` (add wiring line)
 - Test: `backend/usecases/list_available_helpdesk_usecase_test.go` (create)
+- (Note: `main.go` wiring is intentionally NOT done here — see Step 4.)
 
 **Interfaces:**
 - Consumes: `fakePenggunaRepo.ListByRole`, `fakeTiketRepo.CountActiveByHelpdesk`.
@@ -1174,15 +1168,9 @@ func (uc *ListAvailableHelpdeskUseCase) Execute(ctx context.Context) ([]Helpdesk
 }
 ```
 
-- [ ] **Step 4: Wire in main.go**
+- [ ] **Step 4: (no main.go change in this task)**
 
-In `backend/main.go`, after the `unassignTiketUC := ...` line, add:
-
-```go
-	listHelpdeskUC := usecases.NewListAvailableHelpdeskUseCase(penggunaRepo, tiketRepo)
-```
-
-(Consumed by the handler in Task 9.)
+Do NOT wire `listHelpdeskUC` into `main.go` here — same reason as Task 5 Step 4 (an unused local is a Go compile error). All wiring for this usecase happens in Task 9.
 
 - [ ] **Step 5: Run tests**
 
@@ -1192,7 +1180,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/usecases/list_available_helpdesk_usecase.go backend/usecases/list_available_helpdesk_usecase_test.go backend/main.go
+git add backend/usecases/list_available_helpdesk_usecase.go backend/usecases/list_available_helpdesk_usecase_test.go
 git commit -m "feat(helpdesk): list available helpdesks with busy flag"
 ```
 
@@ -1394,7 +1382,14 @@ Also harden the existing `AssignTiket` handler's error mapping so `ErrHelpdeskSi
 
 - [ ] **Step 3: Update DI + routes in main.go**
 
-In `backend/main.go`, update the handler construction (line ~82):
+First, construct the two usecases that Tasks 5 and 7 deliberately did NOT wire (deferred here to avoid an unused-variable build break). In `backend/main.go`, in the "Initialize usecases" block, just after the `assignTiketUC := ...` line, add:
+
+```go
+	unassignTiketUC := usecases.NewUnassignTiketUseCase(tiketRepo, notifikasiRepo)
+	listHelpdeskUC := usecases.NewListAvailableHelpdeskUseCase(penggunaRepo, tiketRepo)
+```
+
+Then update the handler construction (line ~82):
 
 ```go
 	tiketHandler := httpDelivery.NewTiketHandler(createTiketUC, getTiketListUC, getTiketDetailUC, updateTiketStatusUC, assignTiketUC, unassignTiketUC, listHelpdeskUC, uploadLampiranUC)
