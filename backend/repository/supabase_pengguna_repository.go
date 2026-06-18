@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/supabase-community/postgrest-go"
 	"eticketinghelpdesk/entities"
 	"eticketinghelpdesk/interfaces"
 )
@@ -181,6 +182,24 @@ func (r *SupabasePenggunaRepository) parsePengguna(data []byte) (*entities.Pengg
 	if err := json.Unmarshal(data, &p); err != nil {
 		return nil, fmt.Errorf("failed to parse user: %w", err)
 	}
+
+	// Normalize role in case it was stored with package prefix
+	roleStr := string(p.Peran)
+	roleMap := map[string]entities.Role{
+		"pengguna":       entities.RolePengguna,
+		"helpdesk":       entities.RoleHelpdesk,
+		"admin":          entities.RoleAdmin,
+		"Peran.pengguna":  entities.RolePengguna,
+		"Peran.helpdesk":  entities.RoleHelpdesk,
+		"Peran.admin":     entities.RoleAdmin,
+		"entities.pengguna": entities.RolePengguna,
+		"entities.helpdesk": entities.RoleHelpdesk,
+		"entities.admin":    entities.RoleAdmin,
+	}
+	if normalized, ok := roleMap[roleStr]; ok {
+		p.Peran = normalized
+	}
+
 	return &p, nil
 }
 
@@ -189,6 +208,26 @@ func (r *SupabasePenggunaRepository) parsePenggunaList(data []byte) ([]*entities
 	if err := json.Unmarshal(data, &users); err != nil {
 		return nil, fmt.Errorf("failed to parse user list: %w", err)
 	}
+
+	// Normalize roles in case they were stored with package prefix
+	roleMap := map[string]entities.Role{
+		"pengguna":       entities.RolePengguna,
+		"helpdesk":       entities.RoleHelpdesk,
+		"admin":          entities.RoleAdmin,
+		"Peran.pengguna":  entities.RolePengguna,
+		"Peran.helpdesk":  entities.RoleHelpdesk,
+		"Peran.admin":     entities.RoleAdmin,
+		"entities.pengguna": entities.RolePengguna,
+		"entities.helpdesk": entities.RoleHelpdesk,
+		"entities.admin":    entities.RoleAdmin,
+	}
+	for _, user := range users {
+		roleStr := string(user.Peran)
+		if normalized, ok := roleMap[roleStr]; ok {
+			user.Peran = normalized
+		}
+	}
+
 	return users, nil
 }
 
@@ -209,4 +248,17 @@ func containsHelper(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+// ListByRole retrieves all users with a given role
+func (r *SupabasePenggunaRepository) ListByRole(ctx context.Context, role entities.Role) ([]*entities.Pengguna, error) {
+	resp, _, err := r.client.GetTable("pengguna").
+		Select("*", "", false).
+		Eq("peran", string(role)).
+		Order("nama", &postgrest.OrderOpts{Ascending: true}).
+		Execute()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list users by role: %w", err)
+	}
+	return r.parsePenggunaList(resp)
 }
