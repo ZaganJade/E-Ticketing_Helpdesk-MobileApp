@@ -126,10 +126,10 @@ func (t *Tiket) UpdateStatus(newStatus Status, updaterRole Role) error {
 	return nil
 }
 
-// AssignTo assigns ticket to a helpdesk user
+// AssignTo assigns ticket to a helpdesk user. Only an admin may assign.
 func (t *Tiket) AssignTo(helpdeskID uuid.UUID, assignerRole Role) error {
-	if assignerRole != RoleHelpdesk && assignerRole != RoleAdmin {
-		return errors.New("hanya helpdesk atau admin yang dapat menugaskan tiket")
+	if assignerRole != RoleAdmin {
+		return errors.New("hanya admin yang dapat menugaskan tiket")
 	}
 
 	t.DitugaskanKepada = &helpdeskID
