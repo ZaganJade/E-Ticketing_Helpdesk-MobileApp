@@ -81,6 +81,23 @@ func (r *SupabaseAuthRepository) Login(ctx context.Context, email, password stri
 
 	pengguna := penggunaList[0]
 
+	// Normalize role in case it was stored with package prefix
+	roleStr := string(pengguna.Peran)
+	roleMap := map[string]entities.Role{
+		"pengguna":       entities.RolePengguna,
+		"helpdesk":       entities.RoleHelpdesk,
+		"admin":          entities.RoleAdmin,
+		"Peran.pengguna":  entities.RolePengguna,
+		"Peran.helpdesk":  entities.RoleHelpdesk,
+		"Peran.admin":     entities.RoleAdmin,
+		"entities.pengguna": entities.RolePengguna,
+		"entities.helpdesk": entities.RoleHelpdesk,
+		"entities.admin":    entities.RoleAdmin,
+	}
+	if normalized, ok := roleMap[roleStr]; ok {
+		pengguna.Peran = normalized
+	}
+
 	// In real implementation, verify password with Supabase Auth
 	// For now, create a JWT token with user ID
 	accessToken, err := r.generateJWT(pengguna.ID, pengguna.Nama, pengguna.Email, string(pengguna.Peran))
@@ -132,6 +149,23 @@ func (r *SupabaseAuthRepository) GetUserByID(ctx context.Context, userID string)
 	var pengguna entities.Pengguna
 	if err := json.Unmarshal(resp, &pengguna); err != nil {
 		return nil, fmt.Errorf("failed to parse user data: %w", err)
+	}
+
+	// Normalize role in case it was stored with package prefix
+	roleStr := string(pengguna.Peran)
+	roleMap := map[string]entities.Role{
+		"pengguna":       entities.RolePengguna,
+		"helpdesk":       entities.RoleHelpdesk,
+		"admin":          entities.RoleAdmin,
+		"Peran.pengguna":  entities.RolePengguna,
+		"Peran.helpdesk":  entities.RoleHelpdesk,
+		"Peran.admin":     entities.RoleAdmin,
+		"entities.pengguna": entities.RolePengguna,
+		"entities.helpdesk": entities.RoleHelpdesk,
+		"entities.admin":    entities.RoleAdmin,
+	}
+	if normalized, ok := roleMap[roleStr]; ok {
+		pengguna.Peran = normalized
 	}
 
 	return &pengguna, nil

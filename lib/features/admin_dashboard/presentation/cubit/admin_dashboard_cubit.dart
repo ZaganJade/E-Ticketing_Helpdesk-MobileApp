@@ -12,7 +12,6 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
       : _repository = repository,
         super(const AdminDashboardInitial());
 
-  /// Load admin dashboard data
   Future<void> loadDashboard() async {
     emit(const AdminDashboardLoading());
 
@@ -20,30 +19,28 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
 
     result.fold(
       (failure) => emit(AdminDashboardError(failure.message)),
-      (stats) {
-        // Also fetch recent tickets and ticket stats
-        _fetchAdditionalData(stats);
-      },
+      (stats) => _fetchAdditionalData(stats),
     );
   }
 
-  /// Fetch additional data (recent tickets, ticket stats)
   Future<void> _fetchAdditionalData(AdminDashboardStats stats) async {
     final recentResult = await _repository.getRecentTickets(limit: 10);
     final ticketStatsResult = await _repository.getTicketStatsByStatus();
-
-    final recentTickets = recentResult.getOrElse(() => []);
-    final ticketStats = ticketStatsResult.getOrElse(() => {});
+    final poolResult = await _repository.getPoolTickets();
+    final diprosesResult = await _repository.getDiprosesTickets();
+    final helpdesksResult = await _repository.getAvailableHelpdesks();
 
     emit(AdminDashboardLoaded(
       stats: stats,
       greeting: _getGreeting(),
-      recentTickets: recentTickets,
-      ticketStatsByStatus: ticketStats,
+      recentTickets: recentResult.getOrElse(() => []),
+      ticketStatsByStatus: ticketStatsResult.getOrElse(() => {}),
+      poolTickets: poolResult.getOrElse(() => []),
+      diprosesTickets: diprosesResult.getOrElse(() => []),
+      helpdesks: helpdesksResult.getOrElse(() => []),
     ));
   }
 
-  /// Refresh dashboard data
   Future<void> refresh() async {
     final currentState = state;
     if (currentState is! AdminDashboardLoaded) return;
@@ -54,38 +51,77 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
 
     result.fold(
       (failure) => emit(AdminDashboardError(failure.message)),
-      (stats) async {
-        await _fetchAdditionalData(stats);
-      },
+      (stats) async => _fetchAdditionalData(stats),
     );
   }
 
-  /// Reassign ticket to different helpdesk
-  Future<void> reassignTicket(String tiketId, String? helpdeskId) async {
+  Future<void> assignTicket(String tiketId, String helpdeskId) async {
     final currentState = state;
     if (currentState is! AdminDashboardLoaded) return;
 
-    final result = await _repository.reassignTicket(tiketId, helpdeskId);
+    emit(currentState.copyWith(isLoadingPool: true));
+
+    final result = await _repository.assignTicket(tiketId, helpdeskId);
 
     result.fold(
       (failure) {
-        emit(currentState.copyWith(errorMessage: failure.message));
-      },
-      (tiket) {
-        // Update recent tickets list
-        final updatedRecent = currentState.recentTickets.map((t) {
-          return t.id == tiketId ? tiket : t;
-        }).toList();
-
         emit(currentState.copyWith(
-          recentTickets: updatedRecent,
+          isLoadingPool: false,
+          errorMessage: failure.message,
+        ));
+      },
+      (_) => _reloadPoolData(currentState),
+    );
+  }
+
+  Future<void> unassignTicket(String tiketId) async {
+    final currentState = state;
+    if (currentState is! AdminDashboardLoaded) return;
+
+    emit(currentState.copyWith(isLoadingPool: true));
+
+    final result = await _repository.unassignTicket(tiketId);
+
+    result.fold(
+      (failure) {
+        emit(currentState.copyWith(
+          isLoadingPool: false,
+          errorMessage: failure.message,
+        ));
+      },
+      (_) => _reloadPoolData(currentState),
+    );
+  }
+
+  Future<void> _reloadPoolData(AdminDashboardLoaded currentState) async {
+    final statsResult = await _repository.getAdminDashboardStats();
+    final poolResult = await _repository.getPoolTickets();
+    final diprosesResult = await _repository.getDiprosesTickets();
+    final helpdesksResult = await _repository.getAvailableHelpdesks();
+
+    statsResult.fold(
+      (failure) => emit(currentState.copyWith(
+        isLoadingPool: false,
+        errorMessage: failure.message,
+      )),
+      (stats) {
+        emit(currentState.copyWith(
+          stats: stats,
+          poolTickets: poolResult.getOrElse(() => []),
+          diprosesTickets: diprosesResult.getOrElse(() => []),
+          helpdesks: helpdesksResult.getOrElse(() => []),
+          isLoadingPool: false,
           errorMessage: null,
         ));
       },
     );
   }
 
-  /// Load helpdesk performance
+  Future<void> reassignTicket(String tiketId, String? helpdeskId) async {
+    if (helpdeskId == null) return;
+    await assignTicket(tiketId, helpdeskId);
+  }
+
   Future<void> loadHelpdeskPerformance() async {
     final currentState = state;
     if (currentState is! AdminDashboardLoaded) return;
@@ -93,20 +129,17 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
     final result = await _repository.getHelpdeskPerformance();
 
     result.fold(
-      (failure) {
-        emit(currentState.copyWith(errorMessage: failure.message));
-      },
+      (failure) => emit(currentState.copyWith(errorMessage: failure.message)),
       (performances) {
-        final updatedStats = currentState.stats.copyWith(
-          helpdeskPerformances: performances,
-        );
-
-        emit(currentState.copyWith(stats: updatedStats));
+        emit(currentState.copyWith(
+          stats: currentState.stats.copyWith(
+            helpdeskPerformances: performances,
+          ),
+        ));
       },
     );
   }
 
-  /// Get greeting based on time of day
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour < 11) return 'Selamat pagi, Admin';
@@ -115,7 +148,6 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
     return 'Selamat malam, Admin';
   }
 
-  /// Clear error message
   void clearError() {
     final currentState = state;
     if (currentState is AdminDashboardLoaded) {

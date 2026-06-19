@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../../../core/di/injection.dart';
 import '../../../../core/theme/shadcn_theme.dart';
@@ -17,6 +18,7 @@ import '../widgets/ticket_stats_card.dart';
 import '../widgets/user_stats_card.dart';
 import '../widgets/helpdesk_performance_card.dart';
 import '../widgets/recent_tickets_section.dart';
+import '../widgets/admin_ticket_pool_section.dart';
 import '../widgets/admin_skeletons.dart';
 
 class AdminDashboardPage extends StatefulWidget {
@@ -55,6 +57,18 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     context.push('/tiket/${tiket.id}');
   }
 
+  void _onAssign(Tiket tiket, String helpdeskId) {
+    _adminCubit.assignTicket(tiket.id, helpdeskId);
+  }
+
+  void _onReassign(Tiket tiket, String helpdeskId) {
+    _adminCubit.reassignTicket(tiket.id, helpdeskId);
+  }
+
+  void _onUnassign(Tiket tiket) {
+    _adminCubit.unassignTicket(tiket.id);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -90,12 +104,14 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               }
 
               if (state is AdminDashboardLoaded) {
-                return _buildDashboardContent(
-                  context: context,
-                  state: state,
-                  isDark: isDark,
-                  isTablet: isTablet,
-                  horizontalPadding: horizontalPadding,
+                return ShadToaster(
+                  child: _buildDashboardContent(
+                    context: context,
+                    state: state,
+                    isDark: isDark,
+                    isTablet: isTablet,
+                    horizontalPadding: horizontalPadding,
+                  ),
                 );
               }
 
@@ -229,6 +245,22 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             sliver: SliverToBoxAdapter(
               child: HelpdeskPerformanceCard(
                 performances: state.stats.helpdeskPerformances,
+              ),
+            ),
+          ),
+
+          SliverPadding(
+            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+            sliver: SliverToBoxAdapter(
+              child: AdminTicketPoolSection(
+                poolTickets: state.poolTickets,
+                diprosesTickets: state.diprosesTickets,
+                helpdesks: state.helpdesks,
+                isLoading: state.isLoadingPool || state.isRefreshing,
+                onAssign: _onAssign,
+                onReassign: _onReassign,
+                onUnassign: _onUnassign,
+                onTapTiket: _onTapTiket,
               ),
             ),
           ),

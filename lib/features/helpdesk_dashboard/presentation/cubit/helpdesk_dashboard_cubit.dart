@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../tiket/domain/entities/tiket.dart';
 import '../../domain/repositories/helpdesk_dashboard_repository.dart';
 import 'helpdesk_dashboard_state.dart';
 
@@ -21,17 +22,23 @@ class HelpdeskDashboardCubit extends Cubit<HelpdeskDashboardState> {
       (failure) => emit(HelpdeskDashboardError(failure.message)),
       (stats) async {
         // Load additional data after stats
-        final tiketTerbukaResult = await _repository.getTiketTerbuka();
         final tiketSayaResult = await _repository.getTiketSaya();
 
-        final tiketTerbuka = tiketTerbukaResult.getOrElse(() => []);
-        final tiketSaya = tiketSayaResult.getOrElse(() => []);
+        final allTiketSaya = tiketSayaResult.getOrElse(() => []);
+
+        final tiketSaya = allTiketSaya
+            .where((t) => t.status != StatusTiket.selesai)
+            .toList();
+        final tiketSelesai = allTiketSaya
+            .where((t) => t.status == StatusTiket.selesai)
+            .toList();
 
         emit(HelpdeskDashboardLoaded(
           stats: stats,
           greeting: _getGreeting(),
-          tiketTerbuka: tiketTerbuka,
+          tiketTerbuka: const [],
           tiketSaya: tiketSaya,
+          tiketSelesai: tiketSelesai,
         ));
       },
     );
@@ -103,48 +110,6 @@ class HelpdeskDashboardCubit extends Cubit<HelpdeskDashboardState> {
         emit(currentState.copyWith(
           tiketSaya: tiketList,
           isLoadingTiketSaya: false,
-          errorMessage: null,
-        ));
-      },
-    );
-  }
-
-  /// Take/assign a ticket
-  Future<void> ambilTiket(String tiketId) async {
-    final currentState = state;
-    if (currentState is! HelpdeskDashboardLoaded) return;
-
-    emit(currentState.copyWith(isTakingTiket: true));
-
-    final result = await _repository.ambilTiket(tiketId);
-
-    result.fold(
-      (failure) {
-        emit(currentState.copyWith(
-          isTakingTiket: false,
-          errorMessage: failure.message,
-        ));
-      },
-      (tiket) {
-        // Update tiket terbuka list (remove the taken ticket)
-        final updatedTiketTerbuka = currentState.tiketTerbuka
-            .where((t) => t.id != tiketId)
-            .toList();
-
-        // Add to tiket saya list
-        final updatedTiketSaya = [tiket, ...currentState.tiketSaya];
-
-        // Update stats
-        final updatedStats = currentState.stats.copyWith(
-          tiketTerbuka: currentState.stats.tiketTerbuka - 1,
-          tiketSaya: currentState.stats.tiketSaya + 1,
-        );
-
-        emit(currentState.copyWith(
-          tiketTerbuka: updatedTiketTerbuka,
-          tiketSaya: updatedTiketSaya,
-          stats: updatedStats,
-          isTakingTiket: false,
           errorMessage: null,
         ));
       },

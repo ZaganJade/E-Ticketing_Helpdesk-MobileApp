@@ -10,8 +10,7 @@ abstract class HelpdeskDashboardFailure {
 }
 
 class HelpdeskServerFailure extends HelpdeskDashboardFailure {
-  const HelpdeskServerFailure([String message = 'Terjadi kesalahan server'])
-      : super(message);
+  const HelpdeskServerFailure([super.message = 'Terjadi kesalahan server']);
 }
 
 class HelpdeskNetworkFailure extends HelpdeskDashboardFailure {
@@ -23,8 +22,7 @@ class HelpdeskUnauthorizedFailure extends HelpdeskDashboardFailure {
 }
 
 class HelpdeskUnknownFailure extends HelpdeskDashboardFailure {
-  const HelpdeskUnknownFailure([String message = 'Terjadi kesalahan'])
-      : super(message);
+  const HelpdeskUnknownFailure([super.message = 'Terjadi kesalahan']);
 }
 
 /// Interface for helpdesk dashboard repository

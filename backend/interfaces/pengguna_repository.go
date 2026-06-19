@@ -35,4 +35,7 @@ type PenggunaRepository interface {
 
 	// CountByRole returns count of users by role
 	CountByRole(ctx context.Context, role entities.Role) (int64, error)
+
+	// ListByRole retrieves all users with a given role
+	ListByRole(ctx context.Context, role entities.Role) ([]*entities.Pengguna, error)
 }

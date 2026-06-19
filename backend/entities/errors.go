@@ -13,6 +13,7 @@ var (
 	ErrDuplicate          = errors.New("data sudah ada")
 	ErrInternal           = errors.New("terjadi kesalahan internal")
 	ErrValidation         = errors.New("validasi gagal")
+	ErrHelpdeskSibuk      = errors.New("helpdesk sedang menangani tiket lain")
 )
 
 // DomainError represents a domain-specific error
@@ -89,6 +90,11 @@ func IsUnauthorized(err error) bool {
 // IsValidation checks if error is validation error
 func IsValidation(err error) bool {
 	return errors.Is(err, ErrValidation)
+}
+
+// IsHelpdeskSibuk checks if error indicates the target helpdesk is busy
+func IsHelpdeskSibuk(err error) bool {
+	return errors.Is(err, ErrHelpdeskSibuk)
 }
 
 // Common error constructors

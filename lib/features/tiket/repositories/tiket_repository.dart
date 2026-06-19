@@ -173,23 +173,43 @@ class TiketRepository {
     }
   }
 
-  // Assign tiket to helpdesk
-  Future<TiketModel> assignTiket(String tiketId, String? helpdeskId) async {
+  // Assign tiket to helpdesk (admin only)
+  Future<TiketModel> assignTiket(String tiketId, String helpdeskId) async {
     try {
-      final response = await _apiService.post(
+      await _apiService.post(
         '/tikets/$tiketId/assign',
-        data: helpdeskId != null ? {'helpdesk_id': helpdeskId} : {},
+        data: {'helpdesk_id': helpdeskId},
       );
-
-      final data = response.data;
-      if (data == null) {
-        throw Exception('Gagal menugaskan tiket');
-      }
-
-      // Refresh ticket data after assignment
       return await getTiketDetail(tiketId);
     } catch (e) {
       throw Exception('Gagal menugaskan tiket: $e');
+    }
+  }
+
+  // Pull ticket back to pool (admin only)
+  Future<void> unassignTiket(String tiketId) async {
+    try {
+      await _apiService.post('/tikets/$tiketId/unassign', data: {});
+    } catch (e) {
+      throw Exception('Gagal menarik tiket ke pool: $e');
+    }
+  }
+
+  // List helpdesks with busy flag (admin only)
+  Future<List<Map<String, dynamic>>> getHelpdesks() async {
+    try {
+      final response = await _apiService.get('/helpdesks');
+      final data = response.data;
+      if (data == null) return [];
+      if (data is List) {
+        return data.cast<Map<String, dynamic>>();
+      }
+      if (data['data'] is List) {
+        return (data['data'] as List).cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (e) {
+      throw Exception('Gagal mengambil daftar helpdesk: $e');
     }
   }
 

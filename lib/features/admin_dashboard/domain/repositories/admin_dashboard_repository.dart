@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 
 import '../entities/admin_dashboard_stats.dart';
+import '../entities/helpdesk_availability.dart';
 import '../../../tiket/domain/entities/tiket.dart';
 
 /// Failure classes for admin dashboard operations
@@ -10,8 +11,7 @@ abstract class AdminDashboardFailure {
 }
 
 class AdminServerFailure extends AdminDashboardFailure {
-  const AdminServerFailure([String message = 'Terjadi kesalahan server'])
-      : super(message);
+  const AdminServerFailure([super.message = 'Terjadi kesalahan server']);
 }
 
 class AdminNetworkFailure extends AdminDashboardFailure {
@@ -23,8 +23,7 @@ class AdminUnauthorizedFailure extends AdminDashboardFailure {
 }
 
 class AdminUnknownFailure extends AdminDashboardFailure {
-  const AdminUnknownFailure([String message = 'Terjadi kesalahan'])
-      : super(message);
+  const AdminUnknownFailure([super.message = 'Terjadi kesalahan']);
 }
 
 /// Interface for admin dashboard repository
@@ -48,12 +47,35 @@ abstract class AdminDashboardRepository {
     int offset = 0,
   });
 
+  /// Get tickets in the global pool (TERBUKA, unassigned)
+  Future<Either<AdminDashboardFailure, List<Tiket>>> getPoolTickets({
+    int limit = 50,
+  });
+
+  /// Get all DIPROSES tickets (admin monitoring)
+  Future<Either<AdminDashboardFailure, List<Tiket>>> getDiprosesTickets({
+    int limit = 50,
+  });
+
+  /// List helpdesks with busy/free flag
+  Future<Either<AdminDashboardFailure, List<HelpdeskAvailability>>>
+      getAvailableHelpdesks();
+
+  /// Assign ticket to a free helpdesk
+  Future<Either<AdminDashboardFailure, Tiket>> assignTicket(
+    String tiketId,
+    String helpdeskId,
+  );
+
+  /// Pull a DIPROSES ticket back to the pool
+  Future<Either<AdminDashboardFailure, void>> unassignTicket(String tiketId);
+
   /// Get recent tickets (admin view - latest system tickets)
   Future<Either<AdminDashboardFailure, List<Tiket>>> getRecentTickets({
     int limit = 10,
   });
 
-  /// Reassign ticket to different helpdesk
+  /// Reassign ticket to different helpdesk (alias for assign)
   Future<Either<AdminDashboardFailure, Tiket>> reassignTicket(
     String tiketId,
     String? helpdeskId,

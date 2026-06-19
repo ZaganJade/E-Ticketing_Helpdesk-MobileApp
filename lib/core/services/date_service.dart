@@ -92,7 +92,7 @@ extension DateServiceExtension on DateTime {
   /// Format this DateTime as relative time in Indonesian
   String toRelativeTime() {
     final jakartaOffset = const Duration(hours: 7);
-    final jakartaTime = this.add(jakartaOffset);
+    final jakartaTime = add(jakartaOffset);
     final now = DateTime.now().add(jakartaOffset);
     final diff = now.difference(jakartaTime);
 
@@ -113,7 +113,7 @@ extension DateServiceExtension on DateTime {
   /// Format this DateTime as absolute time in Indonesian with WIB indicator
   String toAbsoluteTime() {
     final jakartaOffset = const Duration(hours: 7);
-    final jakartaTime = this.add(jakartaOffset);
+    final jakartaTime = add(jakartaOffset);
     final formatter = DateFormat('dd MMMM yyyy, HH:mm', 'id_ID');
     return '${formatter.format(jakartaTime)} WIB';
   }
@@ -121,7 +121,7 @@ extension DateServiceExtension on DateTime {
   /// Format this DateTime as date only in Indonesian
   String toFormattedDate() {
     final jakartaOffset = const Duration(hours: 7);
-    final jakartaTime = this.add(jakartaOffset);
+    final jakartaTime = add(jakartaOffset);
     final formatter = DateFormat('dd MMMM yyyy', 'id_ID');
     return formatter.format(jakartaTime);
   }

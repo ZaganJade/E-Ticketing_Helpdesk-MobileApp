@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -133,6 +134,13 @@ func (r *SupabaseTiketRepository) GetByIDWithRelations(ctx context.Context, id u
 func (r *SupabaseTiketRepository) List(ctx context.Context, filter interfaces.TiketFilter, offset, limit int) ([]*entities.Tiket, error) {
 	// Get tiket without join to avoid RLS issues
 	query := r.client.GetTable("tiket").Select("*", "", false)
+
+	// Debug logging for RLS investigation
+	if filter.DibuatOleh != nil {
+		log.Printf("[TICKET REPO] Applying DibuatOleh filter: %s", filter.DibuatOleh.String())
+	} else {
+		log.Printf("[TICKET REPO] NO DibuatOleh filter - showing all tickets")
+	}
 
 	// Apply filters
 	if filter.Status != nil {
@@ -422,4 +430,33 @@ func (r *SupabaseTiketRepository) parseTiketList(data []byte) ([]*entities.Tiket
 		return nil, fmt.Errorf("failed to parse ticket list: %w", err)
 	}
 	return tickets, nil
+}
+
+// CountActiveByHelpdesk returns count of DIPROSES tickets for a helpdesk
+func (r *SupabaseTiketRepository) CountActiveByHelpdesk(ctx context.Context, helpdeskID uuid.UUID) (int64, error) {
+	_, count, err := r.client.GetTable("tiket").
+		Select("id", "exact", false).
+		Eq("ditugaskan_kepada", helpdeskID.String()).
+		Eq("status", string(entities.StatusDiproses)).
+		Execute()
+	if err != nil {
+		return 0, fmt.Errorf("failed to count active tickets: %w", err)
+	}
+	return count, nil
+}
+
+// Unassign clears the assignee and returns the ticket to the pool (TERBUKA)
+func (r *SupabaseTiketRepository) Unassign(ctx context.Context, id uuid.UUID) error {
+	data := map[string]interface{}{
+		"ditugaskan_kepada": nil,
+		"status":            string(entities.StatusTerbuka),
+	}
+	_, _, err := r.client.GetTable("tiket").
+		Update(data, "", "").
+		Eq("id", id.String()).
+		Execute()
+	if err != nil {
+		return fmt.Errorf("failed to unassign ticket: %w", err)
+	}
+	return nil
 }

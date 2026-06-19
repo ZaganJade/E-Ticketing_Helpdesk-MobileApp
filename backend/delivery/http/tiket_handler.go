@@ -2,6 +2,7 @@ package http
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -15,22 +16,35 @@ import (
 
 // TiketHandler handles ticket HTTP requests
 type TiketHandler struct {
-	createTiketUC      *usecases.CreateTiketUseCase
-	getTiketListUC     *usecases.GetTiketListUseCase
-	getTiketDetailUC   *usecases.GetTiketDetailUseCase
+	createTiketUC       *usecases.CreateTiketUseCase
+	getTiketListUC      *usecases.GetTiketListUseCase
+	getTiketDetailUC    *usecases.GetTiketDetailUseCase
 	updateTiketStatusUC *usecases.UpdateTiketStatusUseCase
-	assignTiketUC      *usecases.AssignTiketUseCase
+	assignTiketUC       *usecases.AssignTiketUseCase
+	unassignTiketUC     *usecases.UnassignTiketUseCase
+	listHelpdeskUC      *usecases.ListAvailableHelpdeskUseCase
 	uploadLampiranUC    *usecases.UploadLampiranUseCase
 }
 
 // NewTiketHandler creates a new handler instance
-func NewTiketHandler(createUC *usecases.CreateTiketUseCase, listUC *usecases.GetTiketListUseCase, detailUC *usecases.GetTiketDetailUseCase, updateUC *usecases.UpdateTiketStatusUseCase, assignUC *usecases.AssignTiketUseCase, uploadUC *usecases.UploadLampiranUseCase) *TiketHandler {
+func NewTiketHandler(
+	createUC *usecases.CreateTiketUseCase,
+	listUC *usecases.GetTiketListUseCase,
+	detailUC *usecases.GetTiketDetailUseCase,
+	updateUC *usecases.UpdateTiketStatusUseCase,
+	assignUC *usecases.AssignTiketUseCase,
+	unassignUC *usecases.UnassignTiketUseCase,
+	listHelpdeskUC *usecases.ListAvailableHelpdeskUseCase,
+	uploadUC *usecases.UploadLampiranUseCase,
+) *TiketHandler {
 	return &TiketHandler{
-		createTiketUC:      createUC,
-		getTiketListUC:     listUC,
-		getTiketDetailUC:   detailUC,
+		createTiketUC:       createUC,
+		getTiketListUC:      listUC,
+		getTiketDetailUC:    detailUC,
 		updateTiketStatusUC: updateUC,
-		assignTiketUC:      assignUC,
+		assignTiketUC:       assignUC,
+		unassignTiketUC:     unassignUC,
+		listHelpdeskUC:      listHelpdeskUC,
 		uploadLampiranUC:    uploadUC,
 	}
 }
@@ -69,9 +83,12 @@ func (h *TiketHandler) CreateTiket(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetString("userID")
+	uid, ok := currentUserID(c)
+	if !ok {
+		return
+	}
+	userID := uid.String()
 	peran := c.GetString("peran")
-	uid := uuid.MustParse(userID)
 
 	fmt.Printf("[DEBUG CREATE TICKET] Creating ticket for user: %s, role: %s\n", userID, peran)
 	fmt.Printf("[DEBUG CREATE TICKET] Judul: %s\n", judul)
@@ -197,8 +214,13 @@ func (h *TiketHandler) CreateTiket(c *gin.Context) {
 
 // GetTiketList handles listing tickets
 func (h *TiketHandler) GetTiketList(c *gin.Context) {
-	userID := c.GetString("userID")
+	uid, ok := currentUserID(c)
+	if !ok {
+		return
+	}
+	userID := uid.String()
 	peran := c.GetString("peran")
+	log.Printf("[TICKET HANDLER] GetTiketList - User: %s, Role from context: %s (type: %T)", userID, peran, peran)
 
 	// Parse query params
 	status := c.Query("status")
@@ -213,7 +235,7 @@ func (h *TiketHandler) GetTiketList(c *gin.Context) {
 	}
 
 	output, err := h.getTiketListUC.Execute(c.Request.Context(), usecases.GetTiketListInput{
-		UserID:      uuid.MustParse(userID),
+		UserID:      uid,
 		UserRole:    entities.Role(peran),
 		Status:      statusPtr,
 		SearchQuery: search,
@@ -233,15 +255,20 @@ func (h *TiketHandler) GetTiketList(c *gin.Context) {
 
 // GetTiketDetail handles getting ticket details
 func (h *TiketHandler) GetTiketDetail(c *gin.Context) {
-	tiketID := c.Param("id")
-	uid := uuid.MustParse(tiketID)
+	tuid, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
-	userID := c.GetString("userID")
+	uid, ok := currentUserID(c)
+	if !ok {
+		return
+	}
 	peran := c.GetString("peran")
 
 	output, err := h.getTiketDetailUC.Execute(c.Request.Context(), usecases.GetTiketDetailInput{
-		TiketID:  uid,
-		UserID:   uuid.MustParse(userID),
+		TiketID:  tuid,
+		UserID:   uid,
 		UserRole: entities.Role(peran),
 	})
 	if err != nil {
@@ -262,8 +289,10 @@ func (h *TiketHandler) GetTiketDetail(c *gin.Context) {
 
 // UpdateTiketStatus handles status updates
 func (h *TiketHandler) UpdateTiketStatus(c *gin.Context) {
-	tiketID := c.Param("id")
-	uid := uuid.MustParse(tiketID)
+	tuid, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
 	var req UpdateStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -271,19 +300,27 @@ func (h *TiketHandler) UpdateTiketStatus(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetString("userID")
+	uid, ok := currentUserID(c)
+	if !ok {
+		return
+	}
 	peran := c.GetString("peran")
 
 	if err := h.updateTiketStatusUC.Execute(c.Request.Context(), usecases.UpdateTiketStatusInput{
-		TiketID:   uid,
+		TiketID:   tuid,
 		NewStatus: entities.Status(req.Status),
-		UserID:    uuid.MustParse(userID),
+		UserID:    uid,
 		UserRole:  entities.Role(peran),
 	}); err != nil {
 		if entities.IsUnauthorized(err) {
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 			return
 		}
+		if entities.IsNotFound(err) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Tiket tidak ditemukan"})
+			return
+		}
+		// Remaining errors (e.g. invalid status transition) are client errors.
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -293,8 +330,10 @@ func (h *TiketHandler) UpdateTiketStatus(c *gin.Context) {
 
 // AssignTiket handles ticket assignment
 func (h *TiketHandler) AssignTiket(c *gin.Context) {
-	tiketID := c.Param("id")
-	uid := uuid.MustParse(tiketID)
+	tuid, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
 	var req AssignRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -302,17 +341,35 @@ func (h *TiketHandler) AssignTiket(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetString("userID")
+	// req.HelpdeskID is validated as a UUID by binding, but parse defensively.
+	helpdeskID, err := uuid.Parse(req.HelpdeskID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "helpdesk_id tidak valid"})
+		return
+	}
+
+	uid, ok := currentUserID(c)
+	if !ok {
+		return
+	}
 	peran := c.GetString("peran")
 
 	if err := h.assignTiketUC.Execute(c.Request.Context(), usecases.AssignTiketInput{
-		TiketID:      uid,
-		HelpdeskID:   uuid.MustParse(req.HelpdeskID),
-		AssignerID:   uuid.MustParse(userID),
+		TiketID:      tuid,
+		HelpdeskID:   helpdeskID,
+		AssignerID:   uid,
 		AssignerRole: entities.Role(peran),
 	}); err != nil {
+		if entities.IsHelpdeskSibuk(err) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		if entities.IsUnauthorized(err) {
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		if entities.IsNotFound(err) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Tiket tidak ditemukan"})
 			return
 		}
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -320,4 +377,37 @@ func (h *TiketHandler) AssignTiket(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Tiket berhasil ditugaskan"})
+}
+
+// UnassignTiket returns a DIPROSES ticket to the pool (admin only).
+func (h *TiketHandler) UnassignTiket(c *gin.Context) {
+	tuid, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	uid, ok := currentUserID(c)
+	if !ok {
+		return
+	}
+	peran := c.GetString("peran")
+
+	if err := h.unassignTiketUC.Execute(c.Request.Context(), usecases.UnassignTiketInput{
+		TiketID:   tuid,
+		AdminID:   uid,
+		AdminRole: entities.Role(peran),
+	}); err != nil {
+		respondDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Tiket dikembalikan ke pool"})
+}
+
+// ListHelpdesks returns all helpdesks with their busy/free status (admin only).
+func (h *TiketHandler) ListHelpdesks(c *gin.Context) {
+	out, err := h.listHelpdeskUC.Execute(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": out})
 }

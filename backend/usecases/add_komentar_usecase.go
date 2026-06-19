@@ -75,10 +75,45 @@ func (uc *AddKomentarUseCase) Execute(ctx context.Context, input AddKomentarInpu
 	return &AddKomentarOutput{Komentar: komentar}, nil
 }
 
-// GetKomentarByTiketID retrieves all comments for a ticket with authorization check
+// GetKomentarByTiketID retrieves all comments for a ticket, enforcing the same
+// access rules as viewing the ticket itself: helpdesk/admin may view any
+// ticket's comments; a regular user may only view comments on a ticket they
+// created or one assigned to them.
 func (uc *AddKomentarUseCase) GetKomentarByTiketID(ctx context.Context, tiketID uuid.UUID, userID uuid.UUID, userRole entities.Role) ([]*entities.Komentar, error) {
-	// TEMPORARY: Authorization disabled - all authenticated users can view comments
-	// TODO: Re-enable proper authorization once user roles are fixed in Supabase metadata
+	// Verify the ticket exists.
+	tiket, err := uc.tiketRepo.GetByID(ctx, tiketID)
+	if err != nil {
+		if entities.IsNotFound(err) {
+			return nil, entities.NewNotFoundError("tiket")
+		}
+		return nil, fmt.Errorf("gagal mengambil data tiket: %w", err)
+	}
+
+	// Normalize role (handles "Peran.helpdesk", "entities.admin", etc.).
+	roleMap := map[string]entities.Role{
+		"pengguna":          entities.RolePengguna,
+		"helpdesk":          entities.RoleHelpdesk,
+		"admin":             entities.RoleAdmin,
+		"Peran.pengguna":    entities.RolePengguna,
+		"Peran.helpdesk":    entities.RoleHelpdesk,
+		"Peran.admin":       entities.RoleAdmin,
+		"entities.pengguna": entities.RolePengguna,
+		"entities.helpdesk": entities.RoleHelpdesk,
+		"entities.admin":    entities.RoleAdmin,
+	}
+	normalizedRole := userRole
+	if r, ok := roleMap[string(userRole)]; ok {
+		normalizedRole = r
+	}
+
+	// Unknown roles are treated as pengguna for safety.
+	if normalizedRole != entities.RoleHelpdesk && normalizedRole != entities.RoleAdmin {
+		isCreator := tiket.DibuatOleh == userID
+		isAssignee := tiket.DitugaskanKepada != nil && *tiket.DitugaskanKepada == userID
+		if !isCreator && !isAssignee {
+			return nil, entities.NewUnauthorizedError("melihat komentar tiket ini")
+		}
+	}
 
 	return uc.komentarRepo.GetByTiketID(ctx, tiketID)
 }

@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/shadcn_theme.dart';
 import '../cubits/lampiran_cubit.dart';
 import '../models/lampiran_model.dart';

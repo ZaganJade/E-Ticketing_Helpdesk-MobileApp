@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import '../../../../core/theme/shadcn_theme.dart';
 import '../../../../core/services/date_service.dart';
 import '../models/tiket_model.dart';
 

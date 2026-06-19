@@ -226,8 +226,8 @@ class TiketCubit extends Cubit<TiketState> {
     }
   }
 
-  // Assign tiket
-  Future<void> assignTiket(String tiketId, String? helpdeskId) async {
+  // Assign tiket (admin only)
+  Future<void> assignTiket(String tiketId, String helpdeskId) async {
     try {
       final tiket = await _repository.assignTiket(tiketId, helpdeskId);
 

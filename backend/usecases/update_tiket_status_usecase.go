@@ -39,6 +39,13 @@ func (uc *UpdateTiketStatusUseCase) Execute(ctx context.Context, input UpdateTik
 		return err
 	}
 
+	// Helpdesk may only change the status of a ticket assigned to them.
+	if input.UserRole == entities.RoleHelpdesk {
+		if tiket.DitugaskanKepada == nil || *tiket.DitugaskanKepada != input.UserID {
+			return entities.NewUnauthorizedError("mengubah status tiket yang bukan ditugaskan kepada Anda")
+		}
+	}
+
 	// Validate and update status
 	if err := tiket.UpdateStatus(input.NewStatus, input.UserRole); err != nil {
 		return err

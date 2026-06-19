@@ -28,8 +28,10 @@ class HelpdeskDashboardLoaded extends HelpdeskDashboardState {
   final bool isRefreshing;
   final List<Tiket> tiketTerbuka;
   final List<Tiket> tiketSaya;
+  final List<Tiket> tiketSelesai;
   final bool isLoadingTiketTerbuka;
   final bool isLoadingTiketSaya;
+  final bool isLoadingTiketSelesai;
   final bool isTakingTiket;
   final String? errorMessage;
 
@@ -39,8 +41,10 @@ class HelpdeskDashboardLoaded extends HelpdeskDashboardState {
     this.isRefreshing = false,
     this.tiketTerbuka = const [],
     this.tiketSaya = const [],
+    this.tiketSelesai = const [],
     this.isLoadingTiketTerbuka = false,
     this.isLoadingTiketSaya = false,
+    this.isLoadingTiketSelesai = false,
     this.isTakingTiket = false,
     this.errorMessage,
   });
@@ -51,8 +55,10 @@ class HelpdeskDashboardLoaded extends HelpdeskDashboardState {
     bool? isRefreshing,
     List<Tiket>? tiketTerbuka,
     List<Tiket>? tiketSaya,
+    List<Tiket>? tiketSelesai,
     bool? isLoadingTiketTerbuka,
     bool? isLoadingTiketSaya,
+    bool? isLoadingTiketSelesai,
     bool? isTakingTiket,
     String? errorMessage,
   }) {
@@ -62,8 +68,10 @@ class HelpdeskDashboardLoaded extends HelpdeskDashboardState {
       isRefreshing: isRefreshing ?? this.isRefreshing,
       tiketTerbuka: tiketTerbuka ?? this.tiketTerbuka,
       tiketSaya: tiketSaya ?? this.tiketSaya,
+      tiketSelesai: tiketSelesai ?? this.tiketSelesai,
       isLoadingTiketTerbuka: isLoadingTiketTerbuka ?? this.isLoadingTiketTerbuka,
       isLoadingTiketSaya: isLoadingTiketSaya ?? this.isLoadingTiketSaya,
+      isLoadingTiketSelesai: isLoadingTiketSelesai ?? this.isLoadingTiketSelesai,
       isTakingTiket: isTakingTiket ?? this.isTakingTiket,
       errorMessage: errorMessage,
     );
@@ -76,8 +84,10 @@ class HelpdeskDashboardLoaded extends HelpdeskDashboardState {
         isRefreshing,
         tiketTerbuka,
         tiketSaya,
+        tiketSelesai,
         isLoadingTiketTerbuka,
         isLoadingTiketSaya,
+        isLoadingTiketSelesai,
         isTakingTiket,
         errorMessage,
       ];

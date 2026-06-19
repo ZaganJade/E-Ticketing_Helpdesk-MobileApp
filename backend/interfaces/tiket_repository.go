@@ -41,6 +41,12 @@ type TiketRepository interface {
 	// Assign assigns ticket to helpdesk
 	Assign(ctx context.Context, id uuid.UUID, helpdeskID uuid.UUID) error
 
+	// CountActiveByHelpdesk returns how many DIPROSES tickets are assigned to a helpdesk
+	CountActiveByHelpdesk(ctx context.Context, helpdeskID uuid.UUID) (int64, error)
+
+	// Unassign returns a ticket to the pool (status TERBUKA, assignee cleared)
+	Unassign(ctx context.Context, id uuid.UUID) error
+
 	// Delete deletes a ticket
 	Delete(ctx context.Context, id uuid.UUID) error
 

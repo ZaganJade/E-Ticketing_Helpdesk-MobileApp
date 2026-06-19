@@ -1,4 +1,3 @@
-import '../../../../core/services/date_service.dart';
 
 class TiketModel {
   final String id;

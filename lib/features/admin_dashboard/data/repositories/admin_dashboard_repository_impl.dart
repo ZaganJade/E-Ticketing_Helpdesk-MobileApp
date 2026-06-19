@@ -5,6 +5,7 @@ import '../../../auth/domain/repositories/auth_repository.dart';
 import '../../../tiket/data/models/tiket_model.dart';
 import '../../../tiket/domain/entities/tiket.dart';
 import '../../domain/entities/admin_dashboard_stats.dart';
+import '../../domain/entities/helpdesk_availability.dart';
 import '../../domain/repositories/admin_dashboard_repository.dart';
 
 class AdminDashboardRepositoryImpl implements AdminDashboardRepository {
@@ -15,49 +16,43 @@ class AdminDashboardRepositoryImpl implements AdminDashboardRepository {
     required AuthRepository authRepository,
   }) : _apiService = apiService;
 
+  List<Tiket> _parseTiketList(dynamic data) {
+    if (data == null) return [];
+    final List<dynamic> tiketList;
+    if (data is List) {
+      tiketList = data;
+    } else if (data['data'] is List) {
+      tiketList = data['data'] as List;
+    } else {
+      return [];
+    }
+    return tiketList
+        .map((json) => TiketModel.fromJson(json as Map<String, dynamic>))
+        .toList();
+  }
+
   @override
   Future<Either<AdminDashboardFailure, AdminDashboardStats>>
       getAdminDashboardStats() async {
     try {
-      final response = await _apiService.get('/admin/dashboard');
-
+      final response = await _apiService.get('/dashboard/stats');
       final data = response.data;
       if (data == null) {
         return Left(AdminUnknownFailure('Data tidak ditemukan'));
       }
 
-      final dashboardData = data['data'] ?? data;
-
-      final userStats = UserStatsByRole(
-        pengguna: dashboardData['user_stats']?['pengguna'] ?? 0,
-        helpdesk: dashboardData['user_stats']?['helpdesk'] ?? 0,
-        admin: dashboardData['user_stats']?['admin'] ?? 0,
-      );
-
-      final performances = <HelpdeskPerformance>[];
-      final performancesData = dashboardData['helpdesk_performance'] as List?;
-      if (performancesData != null) {
-        for (final item in performancesData) {
-          performances.add(HelpdeskPerformance(
-            helpdeskId: item['helpdesk_id']?.toString() ?? '',
-            helpdeskNama: item['helpdesk_nama'] ?? 'Unknown',
-            totalTiketDitugaskan: item['total_ditugaskan'] ?? 0,
-            tiketSelesai: item['selesai'] ?? 0,
-            rataRataPenyelesaianJam:
-                (item['rata_rata_jam'] as num? ?? 0).toDouble(),
-            persentasePenyelesaian:
-                (item['persentase'] as num? ?? 0).toDouble(),
-          ));
-        }
-      }
+      final terbuka = data['terbuka'] as int? ?? 0;
+      final diproses = data['diproses'] as int? ?? 0;
+      final selesai = data['selesai'] as int? ?? 0;
+      final total = data['total'] as int? ?? (terbuka + diproses + selesai);
 
       return Right(AdminDashboardStats(
-        userStats: userStats,
-        helpdeskPerformances: performances,
-        totalTiket: dashboardData['total_tiket'] ?? 0,
-        tiketTerbuka: dashboardData['tiket_terbuka'] ?? 0,
-        tiketDiproses: dashboardData['tiket_diproses'] ?? 0,
-        tiketSelesai: dashboardData['tiket_selesai'] ?? 0,
+        userStats: const UserStatsByRole(pengguna: 0, helpdesk: 0, admin: 0),
+        helpdeskPerformances: const [],
+        totalTiket: total,
+        tiketTerbuka: terbuka,
+        tiketDiproses: diproses,
+        tiketSelesai: selesai,
       ));
     } catch (e) {
       return Left(AdminUnknownFailure('Gagal mengambil data dashboard: $e'));
@@ -67,60 +62,13 @@ class AdminDashboardRepositoryImpl implements AdminDashboardRepository {
   @override
   Future<Either<AdminDashboardFailure, Map<String, int>>>
       getUserStatsByRole() async {
-    try {
-      final response = await _apiService.get('/admin/users/stats');
-
-      final data = response.data;
-      if (data == null) {
-        return Left(AdminUnknownFailure('Data tidak ditemukan'));
-      }
-
-      final stats = data['data'] ?? data;
-      return Right({
-        'pengguna': stats['pengguna'] ?? 0,
-        'helpdesk': stats['helpdesk'] ?? 0,
-        'admin': stats['admin'] ?? 0,
-        'total': stats['total'] ?? 0,
-      });
-    } catch (e) {
-      return Left(AdminUnknownFailure('Gagal mengambil statistik pengguna: $e'));
-    }
+    return const Right({'pengguna': 0, 'helpdesk': 0, 'admin': 0, 'total': 0});
   }
 
   @override
   Future<Either<AdminDashboardFailure, List<HelpdeskPerformance>>>
       getHelpdeskPerformance() async {
-    try {
-      final response = await _apiService.get('/admin/helpdesk/performance');
-
-      final data = response.data;
-      if (data == null) {
-        return Left(AdminUnknownFailure('Data tidak ditemukan'));
-      }
-
-      final performancesData = data['data'] as List?;
-      if (performancesData == null) {
-        return Right([]);
-      }
-
-      final performances = <HelpdeskPerformance>[];
-      for (final item in performancesData) {
-        performances.add(HelpdeskPerformance(
-          helpdeskId: item['helpdesk_id']?.toString() ?? '',
-          helpdeskNama: item['helpdesk_nama'] ?? 'Unknown',
-          totalTiketDitugaskan: item['total_ditugaskan'] ?? 0,
-          tiketSelesai: item['selesai'] ?? 0,
-          rataRataPenyelesaianJam:
-              (item['rata_rata_jam'] as num? ?? 0).toDouble(),
-          persentasePenyelesaian:
-              (item['persentase'] as num? ?? 0).toDouble(),
-        ));
-      }
-
-      return Right(performances);
-    } catch (e) {
-      return Left(AdminUnknownFailure('Gagal mengambil performa helpdesk: $e'));
-    }
+    return const Right([]);
   }
 
   @override
@@ -134,35 +82,87 @@ class AdminDashboardRepositoryImpl implements AdminDashboardRepository {
         'limit': limit,
         'offset': offset,
       };
-
       if (status != null && status.isNotEmpty) {
         queryParams['status'] = status;
       }
 
       final response = await _apiService.get(
-        '/admin/tikets',
+        '/tikets',
         queryParameters: queryParams,
       );
-
-      final data = response.data;
-      if (data == null) {
-        return Right([]);
-      }
-
-      final List<dynamic> tiketList;
-      if (data is List) {
-        tiketList = data;
-      } else if (data['data'] is List) {
-        tiketList = data['data'] as List;
-      } else {
-        return Right([]);
-      }
-
-      return Right(tiketList
-          .map((json) => TiketModel.fromJson(json as Map<String, dynamic>))
-          .toList());
+      return Right(_parseTiketList(response.data));
     } catch (e) {
       return Left(AdminUnknownFailure('Gagal mengambil daftar tiket: $e'));
+    }
+  }
+
+  @override
+  Future<Either<AdminDashboardFailure, List<Tiket>>> getPoolTickets({
+    int limit = 50,
+  }) async {
+    return getAllTickets(status: 'TERBUKA', limit: limit);
+  }
+
+  @override
+  Future<Either<AdminDashboardFailure, List<Tiket>>> getDiprosesTickets({
+    int limit = 50,
+  }) async {
+    return getAllTickets(status: 'DIPROSES', limit: limit);
+  }
+
+  @override
+  Future<Either<AdminDashboardFailure, List<HelpdeskAvailability>>>
+      getAvailableHelpdesks() async {
+    try {
+      final response = await _apiService.get('/helpdesks');
+      final data = response.data;
+      if (data == null) return const Right([]);
+
+      final List<dynamic> list;
+      if (data is List) {
+        list = data;
+      } else if (data['data'] is List) {
+        list = data['data'] as List;
+      } else {
+        return const Right([]);
+      }
+
+      return Right(list
+          .map((json) =>
+              HelpdeskAvailability.fromJson(json as Map<String, dynamic>))
+          .toList());
+    } catch (e) {
+      return Left(AdminUnknownFailure('Gagal mengambil daftar helpdesk: $e'));
+    }
+  }
+
+  @override
+  Future<Either<AdminDashboardFailure, Tiket>> assignTicket(
+    String tiketId,
+    String helpdeskId,
+  ) async {
+    try {
+      await _apiService.post(
+        '/tikets/$tiketId/assign',
+        data: {'helpdesk_id': helpdeskId},
+      );
+      final detail = await _apiService.get('/tikets/$tiketId');
+      final tiketData = detail.data?['data'] ?? detail.data;
+      return Right(TiketModel.fromJson(tiketData as Map<String, dynamic>));
+    } catch (e) {
+      return Left(AdminUnknownFailure('Gagal menugaskan tiket: $e'));
+    }
+  }
+
+  @override
+  Future<Either<AdminDashboardFailure, void>> unassignTicket(
+    String tiketId,
+  ) async {
+    try {
+      await _apiService.post('/tikets/$tiketId/unassign', data: {});
+      return const Right(null);
+    } catch (e) {
+      return Left(AdminUnknownFailure('Gagal menarik tiket ke pool: $e'));
     }
   }
 
@@ -170,32 +170,7 @@ class AdminDashboardRepositoryImpl implements AdminDashboardRepository {
   Future<Either<AdminDashboardFailure, List<Tiket>>> getRecentTickets({
     int limit = 10,
   }) async {
-    try {
-      final response = await _apiService.get(
-        '/admin/tikets/recent',
-        queryParameters: {'limit': limit},
-      );
-
-      final data = response.data;
-      if (data == null) {
-        return Right([]);
-      }
-
-      final List<dynamic> tiketList;
-      if (data is List) {
-        tiketList = data;
-      } else if (data['data'] is List) {
-        tiketList = data['data'] as List;
-      } else {
-        return Right([]);
-      }
-
-      return Right(tiketList
-          .map((json) => TiketModel.fromJson(json as Map<String, dynamic>))
-          .toList());
-    } catch (e) {
-      return Left(AdminUnknownFailure('Gagal mengambil tiket terbaru: $e'));
-    }
+    return getAllTickets(limit: limit);
   }
 
   @override
@@ -203,40 +178,25 @@ class AdminDashboardRepositoryImpl implements AdminDashboardRepository {
     String tiketId,
     String? helpdeskId,
   ) async {
-    try {
-      final response = await _apiService.post(
-        '/admin/tikets/$tiketId/assign',
-        data: helpdeskId != null ? {'helpdesk_id': helpdeskId} : {},
-      );
-
-      final data = response.data;
-      if (data == null) {
-        return Left(AdminUnknownFailure('Gagal menugaskan ulang tiket'));
-      }
-
-      final tiketData = data['data'] ?? data;
-      return Right(TiketModel.fromJson(tiketData as Map<String, dynamic>));
-    } catch (e) {
-      return Left(AdminUnknownFailure('Gagal menugaskan ulang tiket: $e'));
+    if (helpdeskId == null || helpdeskId.isEmpty) {
+      return Left(AdminUnknownFailure('Helpdesk wajib dipilih'));
     }
+    return assignTicket(tiketId, helpdeskId);
   }
 
   @override
   Future<Either<AdminDashboardFailure, Map<String, int>>>
       getTicketStatsByStatus() async {
     try {
-      final response = await _apiService.get('/admin/tikets/stats');
-
+      final response = await _apiService.get('/dashboard/stats');
       final data = response.data;
       if (data == null) {
         return Left(AdminUnknownFailure('Data tidak ditemukan'));
       }
-
-      final stats = data['data'] ?? data;
       return Right({
-        'TERBUKA': stats['terbuka'] ?? 0,
-        'DIPROSES': stats['diproses'] ?? 0,
-        'SELESAI': stats['selesai'] ?? 0,
+        'TERBUKA': data['terbuka'] ?? 0,
+        'DIPROSES': data['diproses'] ?? 0,
+        'SELESAI': data['selesai'] ?? 0,
       });
     } catch (e) {
       return Left(AdminUnknownFailure('Gagal mengambil statistik tiket: $e'));
