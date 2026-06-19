@@ -5,8 +5,6 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"eticketinghelpdesk/entities"
 	"eticketinghelpdesk/usecases"
 )
 
@@ -26,8 +24,10 @@ func NewNotifikasiHandler(listUC *usecases.GetNotifikasiListUseCase, markReadUC 
 
 // GetNotifikasiList handles listing notifications
 func (h *NotifikasiHandler) GetNotifikasiList(c *gin.Context) {
-	userID := c.GetString("userID")
-	uid := uuid.MustParse(userID)
+	uid, ok := currentUserID(c)
+	if !ok {
+		return
+	}
 
 	// Parse query params - support both "unread" and "sudah_dibaca" parameters
 	onlyUnread := c.Query("unread") == "true"
@@ -57,21 +57,22 @@ func (h *NotifikasiHandler) GetNotifikasiList(c *gin.Context) {
 
 // MarkNotifikasiRead handles marking notification as read
 func (h *NotifikasiHandler) MarkNotifikasiRead(c *gin.Context) {
-	notifID := c.Param("id")
-	uid := uuid.MustParse(notifID)
+	notifUID, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
-	userID := c.GetString("userID")
+	uid, ok := currentUserID(c)
+	if !ok {
+		return
+	}
 
 	if err := h.markNotifikasiReadUC.Execute(c.Request.Context(), usecases.MarkNotifikasiReadInput{
-		NotifikasiID: uid,
-		UserID:       uuid.MustParse(userID),
+		NotifikasiID: notifUID,
+		UserID:       uid,
 		MarkAll:      false,
 	}); err != nil {
-		if entities.IsUnauthorized(err) {
-			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondDomainError(c, err)
 		return
 	}
 
@@ -80,13 +81,16 @@ func (h *NotifikasiHandler) MarkNotifikasiRead(c *gin.Context) {
 
 // MarkAllNotifikasiRead handles marking all notifications as read
 func (h *NotifikasiHandler) MarkAllNotifikasiRead(c *gin.Context) {
-	userID := c.GetString("userID")
+	uid, ok := currentUserID(c)
+	if !ok {
+		return
+	}
 
 	if err := h.markNotifikasiReadUC.Execute(c.Request.Context(), usecases.MarkNotifikasiReadInput{
-		UserID:  uuid.MustParse(userID),
+		UserID:  uid,
 		MarkAll: true,
 	}); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondDomainError(c, err)
 		return
 	}
 

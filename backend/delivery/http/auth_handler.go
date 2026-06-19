@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"eticketinghelpdesk/entities"
+	"eticketinghelpdesk/interfaces"
 	"eticketinghelpdesk/usecases"
 )
 
@@ -18,6 +18,7 @@ type AuthHandler struct {
 	logoutUC             *usecases.LogoutUseCase
 	uploadFotoProfilUC   *usecases.UploadFotoProfilUseCase
 	deleteFotoProfilUC   *usecases.DeleteFotoProfilUseCase
+	penggunaRepo         interfaces.PenggunaRepository
 }
 
 // NewAuthHandler creates a new handler instance
@@ -27,6 +28,7 @@ func NewAuthHandler(
 	logoutUC *usecases.LogoutUseCase,
 	uploadFotoProfilUC *usecases.UploadFotoProfilUseCase,
 	deleteFotoProfilUC *usecases.DeleteFotoProfilUseCase,
+	penggunaRepo interfaces.PenggunaRepository,
 ) *AuthHandler {
 	return &AuthHandler{
 		registerUC:         registerUC,
@@ -34,6 +36,7 @@ func NewAuthHandler(
 		logoutUC:           logoutUC,
 		uploadFotoProfilUC: uploadFotoProfilUC,
 		deleteFotoProfilUC: deleteFotoProfilUC,
+		penggunaRepo:       penggunaRepo,
 	}
 }
 
@@ -130,33 +133,45 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Logout berhasil"})
 }
 
-// GetCurrentUser returns current authenticated user info
+// GetCurrentUser returns current authenticated user info.
+// It loads the full profile (nama, foto_profil) from the database rather than
+// relying on the JWT context, which only carries user_id, email and peran.
 func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
-	userID, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "tidak terautentikasi"})
+	uid, ok := currentUserID(c)
+	if !ok {
 		return
 	}
 
-	peran, _ := c.Get("peran")
-	email, _ := c.Get("email")
-	nama, _ := c.Get("nama")
-	fotoProfil, _ := c.Get("foto_profil")
+	// JWT-derived values, used as a fallback if the profile can't be loaded.
+	email := c.GetString("email")
+	peran := c.GetString("peran")
+
+	pengguna, err := h.penggunaRepo.GetByID(c.Request.Context(), uid)
+	if err != nil {
+		// Profile row not synced yet (or DB unavailable): return what the token carries.
+		c.JSON(http.StatusOK, gin.H{
+			"user_id":     uid.String(),
+			"nama":        nil,
+			"email":       email,
+			"peran":       peran,
+			"foto_profil": nil,
+		})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"user_id":     userID,
-		"nama":        nama,
-		"email":       email,
-		"peran":       peran,
-		"foto_profil": fotoProfil,
+		"user_id":     pengguna.ID.String(),
+		"nama":        pengguna.Nama,
+		"email":       pengguna.Email,
+		"peran":       string(pengguna.Peran),
+		"foto_profil": pengguna.FotoProfil,
 	})
 }
 
 // UploadFotoProfil handles profile photo upload (hanya JPG/PNG)
 func (h *AuthHandler) UploadFotoProfil(c *gin.Context) {
-	userID, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "tidak terautentikasi"})
+	uid, ok := currentUserID(c)
+	if !ok {
 		return
 	}
 
@@ -183,7 +198,7 @@ func (h *AuthHandler) UploadFotoProfil(c *gin.Context) {
 
 	// Execute upload use case with in-memory content
 	output, err := h.uploadFotoProfilUC.Execute(c.Request.Context(), usecases.UploadFotoProfilInput{
-		UserID:   uuid.MustParse(userID.(string)),
+		UserID:   uid,
 		FileName: header.Filename,
 		FileSize: header.Size,
 		Content:  bytes.NewReader(fileContent),
@@ -208,15 +223,14 @@ func (h *AuthHandler) UploadFotoProfil(c *gin.Context) {
 
 // DeleteFotoProfil handles profile photo deletion
 func (h *AuthHandler) DeleteFotoProfil(c *gin.Context) {
-	userID, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "tidak terautentikasi"})
+	uid, ok := currentUserID(c)
+	if !ok {
 		return
 	}
 
 	// Execute delete use case
 	_, err := h.deleteFotoProfilUC.Execute(c.Request.Context(), usecases.DeleteFotoProfilInput{
-		UserID: uuid.MustParse(userID.(string)),
+		UserID: uid,
 	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

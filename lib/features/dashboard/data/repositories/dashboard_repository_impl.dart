@@ -2,7 +2,6 @@ import 'package:dartz/dartz.dart';
 import 'package:logger/logger.dart';
 
 import '../../../../core/services/api_service.dart';
-import '../../../auth/domain/entities/pengguna.dart';
 import '../../../auth/domain/repositories/auth_repository.dart' hide ServerFailure;
 import '../../../tiket/data/models/tiket_model.dart';
 import '../../../tiket/domain/entities/tiket.dart';

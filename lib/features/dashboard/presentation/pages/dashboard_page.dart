@@ -17,7 +17,6 @@ import '../widgets/stat_card.dart';
 import '../widgets/quick_actions.dart';
 import '../widgets/tiket_recent_list.dart';
 import '../widgets/tiket_saya_section.dart';
-import '../widgets/tiket_terbuka_section.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/responsive_layout.dart';
 
@@ -61,11 +60,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
   void _onTapTiket(Tiket tiket) {
     context.push('/tiket/${tiket.id}');
-  }
-
-  void _onAmbilTiket(String tiketId) {
-    HapticFeedback.mediumImpact();
-    _dashboardCubit.ambilTiket(tiketId);
   }
 
   @override
@@ -137,32 +131,52 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildSkeletonLoading(bool isDark, ResponsiveLayout responsive) {
+    final isTablet = responsive.isTablet;
+    final hp = responsive.horizontalPadding;
+
     return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
+        // Greeting skeleton
         SliverToBoxAdapter(
           child: RepaintBoundary(
             child: GreetingSectionSkeleton(isDark: isDark),
           ),
         ),
+        // Stat card skeleton
         SliverPadding(
-          padding: EdgeInsets.all(responsive.horizontalPadding),
+          padding: EdgeInsets.fromLTRB(0, 8, 0, 8),
           sliver: SliverToBoxAdapter(
             child: RepaintBoundary(
               child: StatCardSkeleton(isDark: isDark),
             ),
           ),
         ),
+        // Progress indicator skeleton
         SliverPadding(
-          padding: EdgeInsets.symmetric(horizontal: responsive.horizontalPadding),
+          padding: EdgeInsets.fromLTRB(0, 8, 0, 8),
+          sliver: SliverToBoxAdapter(
+            child: RepaintBoundary(
+              child: StatusProgressSkeleton(
+                isDark: isDark,
+                isTablet: isTablet,
+                horizontalPadding: hp,
+              ),
+            ),
+          ),
+        ),
+        // Quick actions skeleton
+        SliverPadding(
+          padding: EdgeInsets.symmetric(horizontal: 0, vertical: 8),
           sliver: SliverToBoxAdapter(
             child: RepaintBoundary(
               child: QuickActionsSkeleton(isDark: isDark),
             ),
           ),
         ),
+        // Recent tickets skeleton
         SliverPadding(
-          padding: EdgeInsets.all(responsive.horizontalPadding),
+          padding: EdgeInsets.fromLTRB(0, 8, 0, 16),
           sliver: SliverToBoxAdapter(
             child: RepaintBoundary(
               child: TiketRecentListSkeleton(isDark: isDark),
@@ -204,7 +218,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
           // Stats Overview
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(responsive.horizontalPadding, 8, responsive.horizontalPadding, 8),
+            padding: EdgeInsets.fromLTRB(0, 8, 0, 8),
             sliver: SliverToBoxAdapter(
               child: RepaintBoundary(
                 child: StatCard(
@@ -218,7 +232,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
           // Progress Indicator
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(responsive.horizontalPadding, 8, responsive.horizontalPadding, 8),
+            padding: EdgeInsets.fromLTRB(0, 8, 0, 8),
             sliver: SliverToBoxAdapter(
               child: RepaintBoundary(
                 child: StatusProgressIndicator(
@@ -231,7 +245,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
           // Quick Actions
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(responsive.horizontalPadding, 8, responsive.horizontalPadding, 8),
+            padding: EdgeInsets.fromLTRB(0, 8, 0, 8),
             sliver: SliverToBoxAdapter(
               child: RepaintBoundary(
                 child: QuickActions(
@@ -242,22 +256,10 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
           ),
 
-          // Helpdesk Sections
-          if (user?.peran == Peran.helpdesk || user?.peran == Peran.admin) ...[
+          // Helpdesk: only assigned tickets (no pool/self-assign)
+          if (user?.peran == Peran.helpdesk) ...[
             SliverPadding(
-              padding: EdgeInsets.fromLTRB(responsive.horizontalPadding, 8, responsive.horizontalPadding, 8),
-              sliver: SliverToBoxAdapter(
-                child: RepaintBoundary(
-                  child: TiketTerbukaSection(
-                    tiketList: state.tiketTerbuka,
-                    isLoading: state.isLoadingTiketTerbuka,
-                    onAmbilTiket: _onAmbilTiket,
-                  ),
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(responsive.horizontalPadding, 8, responsive.horizontalPadding, 8),
+              padding: EdgeInsets.fromLTRB(0, 8, 0, 8),
               sliver: SliverToBoxAdapter(
                 child: RepaintBoundary(
                   child: TiketSayaSection(
@@ -272,7 +274,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
           // Recent Tickets
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(responsive.horizontalPadding, 8, responsive.horizontalPadding, 16),
+            padding: EdgeInsets.fromLTRB(0, 8, 0, 16),
             sliver: SliverToBoxAdapter(
               child: RepaintBoundary(
                 child: TiketRecentList(

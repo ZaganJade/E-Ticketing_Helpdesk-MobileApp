@@ -35,6 +35,9 @@ func main() {
 	if cfg.SupabaseJWTSecret == "" {
 		log.Fatal("SUPABASE_JWT_SECRET must be set for auth middleware")
 	}
+	if cfg.SupabaseWebhookSecret == "" {
+		log.Println("WARNING: SUPABASE_WEBHOOK_SECRET is not set - webhook signature verification is DISABLED. Set it in production to secure the /api/webhooks endpoints.")
+	}
 
 	// Initialize Supabase client wrapper
 	supabaseClient, err := repository.NewSupabaseClient(cfg)
@@ -59,13 +62,16 @@ func main() {
 	getTiketListUC := usecases.NewGetTiketListUseCase(tiketRepo)
 	getTiketDetailUC := usecases.NewGetTiketDetailUseCase(tiketRepo)
 	updateTiketStatusUC := usecases.NewUpdateTiketStatusUseCase(tiketRepo, notifikasiRepo)
-	assignTiketUC := usecases.NewAssignTiketUseCase(tiketRepo, notifikasiRepo)
+	assignTiketUC := usecases.NewAssignTiketUseCase(tiketRepo, notifikasiRepo, penggunaRepo)
+	unassignTiketUC := usecases.NewUnassignTiketUseCase(tiketRepo, notifikasiRepo)
+	listHelpdeskUC := usecases.NewListAvailableHelpdeskUseCase(penggunaRepo, tiketRepo)
 	addKomentarUC := usecases.NewAddKomentarUseCase(komentarRepo, tiketRepo, notifikasiRepo)
 	getNotifikasiListUC := usecases.NewGetNotifikasiListUseCase(notifikasiRepo)
 	markNotifikasiReadUC := usecases.NewMarkNotifikasiReadUseCase(notifikasiRepo)
 	uploadLampiranUC := usecases.NewUploadLampiranUseCase(lampiranRepo, tiketRepo)
 	deleteLampiranUC := usecases.NewDeleteLampiranUseCase(lampiranRepo, tiketRepo)
 	getDashboardStatsUC := usecases.NewGetDashboardStatsUseCase(tiketRepo)
+	getHelpdeskDashboardUC := usecases.NewGetHelpdeskDashboardUseCase(tiketRepo)
 	uploadFotoProfilUC := usecases.NewUploadFotoProfilUseCase(penggunaRepo, storageRepo, cfg.SupabaseURL)
 	deleteFotoProfilUC := usecases.NewDeleteFotoProfilUseCase(penggunaRepo, storageRepo)
 
@@ -74,12 +80,12 @@ func main() {
 	supabaseAuthMiddleware := middleware.NewSupabaseAuthMiddlewareWithURL(cfg.SupabaseURL, cfg.SupabaseJWTSecret)
 
 	// Create handlers
-	authHandler := httpDelivery.NewAuthHandler(registerUC, loginUC, logoutUC, uploadFotoProfilUC, deleteFotoProfilUC)
-	tiketHandler := httpDelivery.NewTiketHandler(createTiketUC, getTiketListUC, getTiketDetailUC, updateTiketStatusUC, assignTiketUC, uploadLampiranUC)
+	authHandler := httpDelivery.NewAuthHandler(registerUC, loginUC, logoutUC, uploadFotoProfilUC, deleteFotoProfilUC, penggunaRepo)
+	tiketHandler := httpDelivery.NewTiketHandler(createTiketUC, getTiketListUC, getTiketDetailUC, updateTiketStatusUC, assignTiketUC, unassignTiketUC, listHelpdeskUC, uploadLampiranUC)
 	komentarHandler := httpDelivery.NewKomentarHandler(addKomentarUC)
 	notifikasiHandler := httpDelivery.NewNotifikasiHandler(getNotifikasiListUC, markNotifikasiReadUC)
 	lampiranHandler := httpDelivery.NewLampiranHandler(uploadLampiranUC, deleteLampiranUC, lampiranRepo)
-	dashboardHandler := httpDelivery.NewDashboardHandler(getDashboardStatsUC)
+	dashboardHandler := httpDelivery.NewDashboardHandler(getDashboardStatsUC, getHelpdeskDashboardUC)
 	webhookHandler := httpDelivery.NewWebhookHandler(penggunaRepo, cfg.SupabaseWebhookSecret)
 
 	// Setup Gin router
@@ -121,6 +127,10 @@ func main() {
 
 		// Dashboard
 		protected.GET("/dashboard/stats", dashboardHandler.GetStats)
+		protected.GET("/helpdesks", supabaseAuthMiddleware.RequireAdmin(), tiketHandler.ListHelpdesks)
+		protected.GET("/helpdesk/dashboard", supabaseAuthMiddleware.RequireHelpdeskOrAdmin(), dashboardHandler.GetHelpdeskStats)
+		protected.GET("/helpdesk/tiket/terbuka", supabaseAuthMiddleware.RequireHelpdeskOrAdmin(), dashboardHandler.GetTiketTerbuka)
+		protected.GET("/helpdesk/tiket/saya", supabaseAuthMiddleware.RequireHelpdeskOrAdmin(), dashboardHandler.GetTiketSaya)
 
 		// Tiket routes (including nested komentar and lampiran)
 		tikets := protected.Group("/tikets")
@@ -129,7 +139,8 @@ func main() {
 			tikets.POST("", tiketHandler.CreateTiket)
 			tikets.GET("/:id", tiketHandler.GetTiketDetail)
 			tikets.PATCH("/:id/status", supabaseAuthMiddleware.RequireHelpdeskOrAdmin(), tiketHandler.UpdateTiketStatus)
-			tikets.POST("/:id/assign", supabaseAuthMiddleware.RequireHelpdeskOrAdmin(), tiketHandler.AssignTiket)
+			tikets.POST("/:id/assign", supabaseAuthMiddleware.RequireAdmin(), tiketHandler.AssignTiket)
+			tikets.POST("/:id/unassign", supabaseAuthMiddleware.RequireAdmin(), tiketHandler.UnassignTiket)
 
 			// Komentar (nested under tikets/:id)
 			tikets.GET("/:id/komentars", komentarHandler.GetKomentarList)

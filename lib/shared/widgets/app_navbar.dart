@@ -137,7 +137,7 @@ class _NavItemState extends State<_NavItem>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
-  bool _isPressed = false;
+  final bool _isPressed = false;
 
   @override
   void initState() {

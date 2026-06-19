@@ -48,11 +48,26 @@ func AuthMiddleware(authRepo interfaces.AuthRepository) gin.HandlerFunc {
 			return
 		}
 
-		// Set user context
+		// Set user context with normalized role
+		roleStr := string(user.Peran)
+		roleMap := map[string]string{
+			"pengguna":       "pengguna",
+			"helpdesk":       "helpdesk",
+			"admin":          "admin",
+			"Peran.pengguna":  "pengguna",
+			"Peran.helpdesk":  "helpdesk",
+			"Peran.admin":     "admin",
+			"entities.pengguna": "pengguna",
+			"entities.helpdesk": "helpdesk",
+			"entities.admin":    "admin",
+		}
+		if normalized, ok := roleMap[roleStr]; ok {
+			roleStr = normalized
+		}
 		c.Set("userID", userID.String())
 		c.Set("email", user.Email)
 		c.Set("nama", user.Nama)
-		c.Set("peran", string(user.Peran))
+		c.Set("peran", roleStr)
 
 		c.Next()
 	}
@@ -62,7 +77,9 @@ func AuthMiddleware(authRepo interfaces.AuthRepository) gin.HandlerFunc {
 func HelpdeskOrAdminMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		peran := c.GetString("peran")
-		if peran != "helpdesk" && peran != "admin" {
+		if peran != "helpdesk" && peran != "admin" &&
+			peran != "Peran.helpdesk" && peran != "Peran.admin" &&
+			peran != "entities.helpdesk" && peran != "entities.admin" {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Akses ditolak. Hanya helpdesk atau admin."})
 			c.Abort()
 			return
@@ -75,7 +92,7 @@ func HelpdeskOrAdminMiddleware() gin.HandlerFunc {
 func AdminMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		peran := c.GetString("peran")
-		if peran != "admin" {
+		if peran != "admin" && peran != "Peran.admin" && peran != "entities.admin" {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Akses ditolak. Hanya admin."})
 			c.Abort()
 			return

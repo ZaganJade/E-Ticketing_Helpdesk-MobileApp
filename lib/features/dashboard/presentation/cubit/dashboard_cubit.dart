@@ -5,7 +5,6 @@ import 'package:logger/logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/services/api_service.dart';
-import '../../../auth/domain/entities/pengguna.dart';
 import '../../../tiket/domain/entities/tiket.dart';
 import '../../domain/entities/dashboard_stats.dart';
 import '../../domain/repositories/dashboard_repository.dart';

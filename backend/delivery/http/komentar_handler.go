@@ -39,11 +39,18 @@ func (h *KomentarHandler) GetKomentarList(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetString("userID")
+	uid, ok := currentUserID(c)
+	if !ok {
+		return
+	}
 	peran := c.GetString("peran")
 
-	komentarList, err := h.addKomentarUC.GetKomentarByTiketID(c.Request.Context(), tuid, uuid.MustParse(userID), entities.Role(peran))
+	komentarList, err := h.addKomentarUC.GetKomentarByTiketID(c.Request.Context(), tuid, uid, entities.Role(peran))
 	if err != nil {
+		if entities.IsNotFound(err) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Tiket tidak ditemukan"})
+			return
+		}
 		if entities.IsUnauthorized(err) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Tidak memiliki akses ke tiket ini"})
 			return
@@ -94,6 +101,10 @@ func (h *KomentarHandler) AddKomentar(c *gin.Context) {
 	if execErr != nil {
 		if entities.IsValidation(execErr) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": execErr.Error()})
+			return
+		}
+		if entities.IsNotFound(execErr) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Tiket tidak ditemukan"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{

@@ -84,7 +84,7 @@ class LampiranRepository {
 
       // Upload via API Service
       final dio = Dio();
-      final token = await _apiService.getToken();
+      final token = _apiService.getToken();
 
       final response = await dio.post(
         '${_apiService.baseUrl}/tikets/$tiketId/lampirans/upload',

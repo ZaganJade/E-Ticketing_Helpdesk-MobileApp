@@ -259,6 +259,26 @@ func (m *SupabaseAuthMiddleware) RequireAuth() gin.HandlerFunc {
 			}
 		}
 
+		log.Printf("[AUTH] Extracted role from token: %s for user: %s", role, claims.Email)
+
+		// Normalize role to handle Go enum string representations
+		roleMap := map[string]string{
+			"pengguna":         "pengguna",
+			"helpdesk":         "helpdesk",
+			"admin":            "admin",
+			"Peran.pengguna":   "pengguna",
+			"Peran.helpdesk":   "helpdesk",
+			"Peran.admin":      "admin",
+			"entities.pengguna": "pengguna",
+			"entities.helpdesk": "helpdesk",
+			"entities.admin":    "admin",
+		}
+		if normalized, ok := roleMap[role]; ok {
+			role = normalized
+		}
+
+		log.Printf("[AUTH] Normalized role to: %s for user: %s", role, claims.Email)
+
 		// Set user context
 		c.Set("userID", userID.String())
 		c.Set("email", claims.Email)
@@ -273,6 +293,8 @@ func (m *SupabaseAuthMiddleware) RequireRole(roles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userRole := c.GetString("peran")
 
+		log.Printf("[AUTH] RequireRole check - userRole: %s, allowed roles: %v", userRole, roles)
+
 		// Check if user's role is in allowed roles
 		allowed := false
 		for _, role := range roles {
@@ -283,11 +305,13 @@ func (m *SupabaseAuthMiddleware) RequireRole(roles ...string) gin.HandlerFunc {
 		}
 
 		if !allowed {
+			log.Printf("[AUTH] Access denied - user role %s not in allowed roles %v", userRole, roles)
 			c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
 			c.Abort()
 			return
 		}
 
+		log.Printf("[AUTH] Access granted for role: %s", userRole)
 		c.Next()
 	}
 }

@@ -49,9 +49,9 @@ class RoleUtils {
     return isStaff();
   }
 
-  /// Check if user can assign tiket
+  /// Check if user can assign tiket (admin only)
   static Future<bool> canAssignTiket() async {
-    return isStaff();
+    return isAdmin();
   }
 
   /// Check if user can change tiket status

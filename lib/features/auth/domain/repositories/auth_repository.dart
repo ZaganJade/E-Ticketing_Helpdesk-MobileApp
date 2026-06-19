@@ -28,7 +28,7 @@ class SessionExpiredFailure extends AuthFailure {
 }
 
 class ServerFailure extends AuthFailure {
-  const ServerFailure([String message = 'Terjadi kesalahan server']) : super(message);
+  const ServerFailure([super.message = 'Terjadi kesalahan server']);
 }
 
 class NetworkFailure extends AuthFailure {
@@ -36,7 +36,7 @@ class NetworkFailure extends AuthFailure {
 }
 
 class UnknownAuthFailure extends AuthFailure {
-  const UnknownAuthFailure([String message = 'Terjadi kesalahan']) : super(message);
+  const UnknownAuthFailure([super.message = 'Terjadi kesalahan']);
 }
 
 /// Interface for authentication repository

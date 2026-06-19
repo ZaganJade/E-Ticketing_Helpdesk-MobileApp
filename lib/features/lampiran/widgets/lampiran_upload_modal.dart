@@ -1,7 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
-import '../../../../core/theme/shadcn_theme.dart';
 import 'lampiran_upload.dart';
 
 /// Modal wrapper for LampiranUpload with backdrop blur

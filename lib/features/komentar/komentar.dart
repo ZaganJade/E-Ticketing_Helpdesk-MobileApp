@@ -1,6 +1,7 @@
 /// Komentar Feature Barrel File
 ///
 /// Export all public APIs from the komentar feature
+library;
 
 // Domain
 export 'domain/entities/komentar.dart';

@@ -50,6 +50,9 @@ app.*.map.json
 .env.development
 .env.*.local
 
+# Node.js
+node_modules/
+
 # Backend specific
 backend/vendor/
 backend/tmp/
@@ -77,11 +80,16 @@ backend/.claude/
 Debug SS/
 openspec/
 supabase/
-ENV_SETUP.md
-task.md
-task1.md
-AGENTS.md
+
+# Documents (local notes/specs — do not commit)
 docs/
+*.md
+!/README.md
+*.doc
+*.docx
+*.pdf
+*.odt
+*.rtf
 
 # Worktrees
 worktrees/
