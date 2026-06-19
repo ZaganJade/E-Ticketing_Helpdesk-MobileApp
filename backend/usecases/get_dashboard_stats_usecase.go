@@ -37,8 +37,25 @@ func (uc *GetDashboardStatsUseCase) Execute(ctx context.Context, input GetDashbo
 	var stats *interfaces.TiketStats
 	var err error
 
+	// Normalize role to handle both "helpdesk" and "Peran.helpdesk" formats
+	roleMap := map[string]entities.Role{
+		"pengguna":       entities.RolePengguna,
+		"helpdesk":       entities.RoleHelpdesk,
+		"admin":          entities.RoleAdmin,
+		"Peran.pengguna":  entities.RolePengguna,
+		"Peran.helpdesk":  entities.RoleHelpdesk,
+		"Peran.admin":     entities.RoleAdmin,
+		"entities.pengguna": entities.RolePengguna,
+		"entities.helpdesk": entities.RoleHelpdesk,
+		"entities.admin":    entities.RoleAdmin,
+	}
+	normalizedRole := input.UserRole
+	if r, ok := roleMap[string(input.UserRole)]; ok {
+		normalizedRole = r
+	}
+
 	// Helpdesk/Admin see all stats, users see only their own
-	if input.UserRole == entities.RoleHelpdesk || input.UserRole == entities.RoleAdmin {
+	if normalizedRole == entities.RoleHelpdesk || normalizedRole == entities.RoleAdmin {
 		stats, err = uc.tiketRepo.GetStats(ctx)
 	} else {
 		stats, err = uc.tiketRepo.GetStatsByUser(ctx, input.UserID)

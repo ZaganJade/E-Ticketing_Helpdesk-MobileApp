@@ -1,6 +1,7 @@
 /// Auth Feature Barrel File
 ///
 /// Export all public APIs from the auth feature
+library;
 
 // Domain
 export 'domain/entities/pengguna.dart';

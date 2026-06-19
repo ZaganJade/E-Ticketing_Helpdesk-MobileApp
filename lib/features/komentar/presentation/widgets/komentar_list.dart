@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '../../../../core/theme/shadcn_theme.dart';
-import '../../domain/entities/komentar.dart';
 import '../cubit/komentar_cubit.dart';
 import 'komentar_card.dart';
 

@@ -1,0 +1,16 @@
+#!/bin/sh
+# Block Co-Authored-By and other contributor trailers.
+
+if grep -qiE '^Co-Authored-By:' "$1"; then
+  echo "ERROR: Co-Authored-By trailers are not allowed in this repository." >&2
+  echo "Only ZaganJade <tipstrik81@gmail.com> may be listed as contributor." >&2
+  exit 1
+fi
+
+if grep -qiE '^(Signed-off-by|Reviewed-by|Thanks-to|Reported-by|Helped-by):' "$1"; then
+  echo "ERROR: Contributor attribution trailers are not allowed." >&2
+  echo "Only ZaganJade <tipstrik81@gmail.com> may be listed as contributor." >&2
+  exit 1
+fi
+
+exit 0

@@ -204,7 +204,6 @@ class AuthRepositoryImpl implements AuthRepository {
       if (session == null) return null;
 
       final user = session.user;
-      if (user == null) return null;
 
       return await _fetchUserData(user.id);
     });

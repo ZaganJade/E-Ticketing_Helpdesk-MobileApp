@@ -10,7 +10,7 @@ abstract class DashboardFailure {
 }
 
 class ServerFailure extends DashboardFailure {
-  const ServerFailure([String message = 'Terjadi kesalahan server']) : super(message);
+  const ServerFailure([super.message = 'Terjadi kesalahan server']);
 }
 
 class NetworkFailure extends DashboardFailure {
@@ -22,7 +22,7 @@ class UnauthorizedFailure extends DashboardFailure {
 }
 
 class UnknownDashboardFailure extends DashboardFailure {
-  const UnknownDashboardFailure([String message = 'Terjadi kesalahan']) : super(message);
+  const UnknownDashboardFailure([super.message = 'Terjadi kesalahan']);
 }
 
 /// Interface for dashboard repository

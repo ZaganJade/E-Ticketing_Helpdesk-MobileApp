@@ -52,7 +52,25 @@ func (uc *UploadLampiranUseCase) Execute(ctx context.Context, input UploadLampir
 	// - Pengguna can upload to their own tickets (tickets where DibuatOleh == userID)
 	// - Helpdesk can upload to their own tickets (tickets where DibuatOleh == userID)
 	// - Admin can upload to any ticket
-	if userRole != entities.RoleAdmin {
+
+	// Normalize role to handle both "admin" and "Peran.admin" formats
+	roleMap := map[string]entities.Role{
+		"pengguna":       entities.RolePengguna,
+		"helpdesk":       entities.RoleHelpdesk,
+		"admin":          entities.RoleAdmin,
+		"Peran.pengguna":  entities.RolePengguna,
+		"Peran.helpdesk":  entities.RoleHelpdesk,
+		"Peran.admin":     entities.RoleAdmin,
+		"entities.pengguna": entities.RolePengguna,
+		"entities.helpdesk": entities.RoleHelpdesk,
+		"entities.admin":    entities.RoleAdmin,
+	}
+	normalizedRole := userRole
+	if r, ok := roleMap[string(userRole)]; ok {
+		normalizedRole = r
+	}
+
+	if normalizedRole != entities.RoleAdmin {
 		if tiket.DibuatOleh != input.DibuatOleh {
 			return nil, entities.ErrUnauthorized
 		}

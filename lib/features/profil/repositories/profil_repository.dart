@@ -192,7 +192,7 @@ class ProfilRepository {
 
       // Upload via API Service
       final dio = Dio();
-      final token = await _apiService.getToken();
+      final token = _apiService.getToken();
 
       final response = await dio.post(
         '${_apiService.baseUrl}/auth/me/photo',

@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"eticketinghelpdesk/entities"
 	"eticketinghelpdesk/interfaces"
 	"eticketinghelpdesk/usecases"
@@ -31,8 +30,10 @@ func NewLampiranHandler(uploadUC *usecases.UploadLampiranUseCase, deleteUC *usec
 
 // UploadLampiran handles file upload with role-based authorization
 func (h *LampiranHandler) UploadLampiran(c *gin.Context) {
-	tiketID := c.Param("id")
-	tuid := uuid.MustParse(tiketID)
+	tuid, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
 	// Get uploaded file
 	file, header, err := c.Request.FormFile("file")
@@ -55,8 +56,10 @@ func (h *LampiranHandler) UploadLampiran(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetString("userID")
-	uid := uuid.MustParse(userID)
+	uid, ok := currentUserID(c)
+	if !ok {
+		return
+	}
 
 	// Get user role for authorization
 	peran := c.GetString("peran")
@@ -85,7 +88,7 @@ func (h *LampiranHandler) UploadLampiran(c *gin.Context) {
 	}, userRole)
 	if err != nil {
 		fmt.Printf("[DEBUG] Upload error: %v\n", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondDomainError(c, err)
 		return
 	}
 
@@ -123,8 +126,10 @@ func getMimeTypeFromExt(ext string) string {
 
 // DownloadLampiran handles file download
 func (h *LampiranHandler) DownloadLampiran(c *gin.Context) {
-	lampiranID := c.Param("lampiran_id")
-	luid := uuid.MustParse(lampiranID)
+	luid, ok := parseUUIDParam(c, "lampiran_id")
+	if !ok {
+		return
+	}
 
 	lampiran, err := h.lampiranRepo.GetByID(c.Request.Context(), luid)
 	if err != nil {
@@ -147,11 +152,15 @@ func (h *LampiranHandler) DownloadLampiran(c *gin.Context) {
 
 // DeleteLampiran handles file deletion
 func (h *LampiranHandler) DeleteLampiran(c *gin.Context) {
-	lampiranID := c.Param("lampiran_id")
-	luid := uuid.MustParse(lampiranID)
+	luid, ok := parseUUIDParam(c, "lampiran_id")
+	if !ok {
+		return
+	}
 
-	userID := c.GetString("userID")
-	uid := uuid.MustParse(userID)
+	uid, ok := currentUserID(c)
+	if !ok {
+		return
+	}
 	peran := c.GetString("peran")
 	userRole := entities.Role(peran)
 
@@ -161,11 +170,7 @@ func (h *LampiranHandler) DeleteLampiran(c *gin.Context) {
 		UserRole:   userRole,
 	})
 	if err != nil {
-		if entities.IsUnauthorized(err) {
-			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondDomainError(c, err)
 		return
 	}
 
@@ -174,8 +179,10 @@ func (h *LampiranHandler) DeleteLampiran(c *gin.Context) {
 
 // GetLampiranList handles listing attachments for a ticket
 func (h *LampiranHandler) GetLampiranList(c *gin.Context) {
-	tiketID := c.Param("id")
-	tuid := uuid.MustParse(tiketID)
+	tuid, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
 	lampiranList, err := h.lampiranRepo.GetByTiketID(c.Request.Context(), tuid)
 	if err != nil {

@@ -37,8 +37,26 @@ func NewGetTiketListUseCase(tiketRepo interfaces.TiketRepository) *GetTiketListU
 
 // Execute retrieves ticket list based on filters (optimized)
 func (uc *GetTiketListUseCase) Execute(ctx context.Context, input GetTiketListInput) (*GetTiketListOutput, error) {
-	// Debug logging (reduced for performance)
-	log.Printf("[TICKET LIST] User: %s, Role: %s", input.UserID, input.UserRole)
+	// Normalize role to handle both "helpdesk" and "Peran.helpdesk" formats
+	roleMap := map[string]entities.Role{
+		"pengguna":       entities.RolePengguna,
+		"helpdesk":       entities.RoleHelpdesk,
+		"admin":          entities.RoleAdmin,
+		"Peran.pengguna":  entities.RolePengguna,
+		"Peran.helpdesk":  entities.RoleHelpdesk,
+		"Peran.admin":     entities.RoleAdmin,
+		"entities.pengguna": entities.RolePengguna,
+		"entities.helpdesk": entities.RoleHelpdesk,
+		"entities.admin":    entities.RoleAdmin,
+	}
+	normalizedRole := input.UserRole
+	if r, ok := roleMap[string(input.UserRole)]; ok {
+		normalizedRole = r
+		log.Printf("[TICKET LIST] Role normalized from %q to %q", string(input.UserRole), string(normalizedRole))
+	}
+
+	// // Debug logging (reduced for performance)
+	// log.Printf("[TICKET LIST] User: %s, Role: %s", input.UserID, input.UserRole)
 
 	// Build filter based on user role
 	filter := interfaces.TiketFilter{
@@ -46,14 +64,15 @@ func (uc *GetTiketListUseCase) Execute(ctx context.Context, input GetTiketListIn
 		SearchQuery: input.SearchQuery,
 	}
 
-	// Apply filter based on user role (following same pattern as dashboard stats)
-	// Helpdesk and Admin can see all tickets
-	// Regular users can only see their own tickets
-	if input.UserRole == entities.RoleHelpdesk || input.UserRole == entities.RoleAdmin {
-		// Helpdesk and Admin see all tickets - no DibuatOleh filter
-		log.Printf("[TICKET LIST] %s user - accessing all tickets", input.UserRole)
-	} else {
-		// Regular users (and unknown roles for safety) see only their own tickets
+	// Apply filter based on user role
+	switch normalizedRole {
+	case entities.RoleAdmin:
+		// Admin sees all tickets — no owner/assignee filter.
+	case entities.RoleHelpdesk:
+		// Helpdesk sees only tickets assigned to them (active + their history).
+		filter.DitugaskanKepada = &input.UserID
+	default:
+		// Regular users (and unknown roles for safety) see only their own tickets.
 		filter.DibuatOleh = &input.UserID
 	}
 

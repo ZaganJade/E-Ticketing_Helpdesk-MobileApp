@@ -30,6 +30,30 @@ func NewWebhookHandler(
 	}
 }
 
+// normalizeRole strips package prefix from role string and returns valid Role value
+// Handles cases like "Peran.helpdesk" -> "helpdesk"
+func normalizeRole(roleStr string) entities.Role {
+	// Map both simple values and values with package prefix
+	roleMap := map[string]entities.Role{
+		"pengguna":       entities.RolePengguna,
+		"helpdesk":       entities.RoleHelpdesk,
+		"admin":          entities.RoleAdmin,
+		"Peran.pengguna":  entities.RolePengguna,
+		"Peran.helpdesk":  entities.RoleHelpdesk,
+		"Peran.admin":     entities.RoleAdmin,
+		"entities.pengguna": entities.RolePengguna,
+		"entities.helpdesk": entities.RoleHelpdesk,
+		"entities.admin":    entities.RoleAdmin,
+	}
+
+	if normalized, ok := roleMap[roleStr]; ok {
+		return normalized
+	}
+
+	// Default to pengguna for safety
+	return entities.RolePengguna
+}
+
 // UserWebhookPayload represents the payload from Supabase auth webhook
 type UserWebhookPayload struct {
 	Type   string `json:"type"` // INSERT, UPDATE, DELETE
@@ -115,10 +139,10 @@ func (h *WebhookHandler) HandleUserCreated(c *gin.Context) {
 	peran := entities.RolePengguna
 	if payload.Record.RawUserMetaData != nil {
 		if r, ok := payload.Record.RawUserMetaData["peran"].(string); ok {
-			peran = entities.Role(r)
+			peran = normalizeRole(r)
 		}
 		if r, ok := payload.Record.RawUserMetaData["role"].(string); ok {
-			peran = entities.Role(r)
+			peran = normalizeRole(r)
 		}
 	}
 
@@ -188,10 +212,10 @@ func (h *WebhookHandler) HandleUserUpdated(c *gin.Context) {
 			existing.Nama = n
 		}
 		if r, ok := payload.Record.RawUserMetaData["peran"].(string); ok {
-			existing.Peran = entities.Role(r)
+			existing.Peran = normalizeRole(r)
 		}
 		if r, ok := payload.Record.RawUserMetaData["role"].(string); ok {
-			existing.Peran = entities.Role(r)
+			existing.Peran = normalizeRole(r)
 		}
 	}
 	existing.DiperbaruiPada = payload.Record.UpdatedAt
@@ -293,10 +317,10 @@ func (h *WebhookHandler) handleInsert(c *gin.Context, payload UserWebhookPayload
 	peran := entities.RolePengguna
 	if payload.Record.RawUserMetaData != nil {
 		if r, ok := payload.Record.RawUserMetaData["peran"].(string); ok {
-			peran = entities.Role(r)
+			peran = normalizeRole(r)
 		}
 		if r, ok := payload.Record.RawUserMetaData["role"].(string); ok {
-			peran = entities.Role(r)
+			peran = normalizeRole(r)
 		}
 	}
 
@@ -350,10 +374,10 @@ func (h *WebhookHandler) handleUpdate(c *gin.Context, payload UserWebhookPayload
 			existing.Nama = n
 		}
 		if r, ok := payload.Record.RawUserMetaData["peran"].(string); ok {
-			existing.Peran = entities.Role(r)
+			existing.Peran = normalizeRole(r)
 		}
 		if r, ok := payload.Record.RawUserMetaData["role"].(string); ok {
-			existing.Peran = entities.Role(r)
+			existing.Peran = normalizeRole(r)
 		}
 	}
 	existing.DiperbaruiPada = payload.Record.UpdatedAt

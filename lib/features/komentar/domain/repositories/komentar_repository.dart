@@ -17,7 +17,7 @@ class TiketNotFoundFailure extends KomentarFailure {
 }
 
 class ServerFailure extends KomentarFailure {
-  const ServerFailure([String message = 'Terjadi kesalahan server']) : super(message);
+  const ServerFailure([super.message = 'Terjadi kesalahan server']);
 }
 
 class NetworkFailure extends KomentarFailure {
@@ -29,7 +29,7 @@ class UnauthorizedFailure extends KomentarFailure {
 }
 
 class UnknownKomentarFailure extends KomentarFailure {
-  const UnknownKomentarFailure([String message = 'Terjadi kesalahan']) : super(message);
+  const UnknownKomentarFailure([super.message = 'Terjadi kesalahan']);
 }
 
 /// Interface for komentar repository

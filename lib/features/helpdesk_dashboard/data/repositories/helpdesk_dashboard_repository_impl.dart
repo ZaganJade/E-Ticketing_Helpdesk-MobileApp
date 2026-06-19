@@ -39,6 +39,7 @@ class HelpdeskDashboardRepositoryImpl implements HelpdeskDashboardRepository {
             dashboardData['total_ditangani'] as int? ?? 0,
         tiketTerbuka: dashboardData['tiket_terbuka'] as int? ?? 0,
         tiketSaya: dashboardData['tiket_saya'] as int? ?? 0,
+        tiketSelesai: dashboardData['tiket_selesai'] as int? ?? 0,
         tiketTerbaru: tiketTerbaru,
         rataRataWaktuSelesai:
             (dashboardData['rata_rata_jam'] as num?)?.toDouble() ?? 0.0,

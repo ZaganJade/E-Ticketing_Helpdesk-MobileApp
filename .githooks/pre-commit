@@ -1,0 +1,38 @@
+#!/bin/sh
+# Block commits from unregistered git identities.
+
+ALLOWED_NAME="ZaganJade"
+ALLOWED_EMAIL="tipstrik81@gmail.com"
+
+name=$(git config user.name)
+email=$(git config user.email)
+
+if [ "$name" != "$ALLOWED_NAME" ] || [ "$email" != "$ALLOWED_EMAIL" ]; then
+  echo "ERROR: Git identity must be $ALLOWED_NAME <$ALLOWED_EMAIL>" >&2
+  echo "Current: $name <$email>" >&2
+  echo "Run: git config --global user.name \"$ALLOWED_NAME\"" >&2
+  echo "     git config --global user.email \"$ALLOWED_EMAIL\"" >&2
+  exit 1
+fi
+
+if [ -n "$GIT_AUTHOR_NAME" ] && [ "$GIT_AUTHOR_NAME" != "$ALLOWED_NAME" ]; then
+  echo "ERROR: GIT_AUTHOR_NAME override is not allowed." >&2
+  exit 1
+fi
+
+if [ -n "$GIT_AUTHOR_EMAIL" ] && [ "$GIT_AUTHOR_EMAIL" != "$ALLOWED_EMAIL" ]; then
+  echo "ERROR: GIT_AUTHOR_EMAIL override is not allowed." >&2
+  exit 1
+fi
+
+if [ -n "$GIT_COMMITTER_NAME" ] && [ "$GIT_COMMITTER_NAME" != "$ALLOWED_NAME" ]; then
+  echo "ERROR: GIT_COMMITTER_NAME override is not allowed." >&2
+  exit 1
+fi
+
+if [ -n "$GIT_COMMITTER_EMAIL" ] && [ "$GIT_COMMITTER_EMAIL" != "$ALLOWED_EMAIL" ]; then
+  echo "ERROR: GIT_COMMITTER_EMAIL override is not allowed." >&2
+  exit 1
+fi
+
+exit 0

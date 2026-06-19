@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/theme/shadcn_theme.dart';
-import '../../../auth/domain/entities/pengguna.dart';
 import '../../domain/entities/komentar.dart';
 import '../../domain/repositories/komentar_repository.dart';
 import '../cubit/komentar_input_cubit.dart';

@@ -5,7 +5,6 @@ import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
 
 import '../../../../core/services/api_service.dart';
-import '../../../auth/domain/entities/pengguna.dart';
 import '../../domain/entities/komentar.dart';
 import '../../domain/repositories/komentar_repository.dart';
 import '../models/komentar_model.dart';

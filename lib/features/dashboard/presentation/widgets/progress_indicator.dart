@@ -6,14 +6,16 @@ import '../../../../core/theme/shadcn_theme.dart';
 import '../../../../shared/widgets/widgets.dart';
 import '../../domain/entities/tiket_status_stats.dart';
 
-/// Clean donut chart painter
+/// Clean donut chart painter with animation support
 class _DonutChartPainter extends CustomPainter {
   final List<_ChartSegment> segments;
   final double strokeWidth;
+  final double animationValue;
 
   _DonutChartPainter({
     required this.segments,
     required this.strokeWidth,
+    this.animationValue = 1.0,
   });
 
   @override
@@ -21,11 +23,20 @@ class _DonutChartPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
 
+    // Draw background track
+    final bgPaint = Paint()
+      ..color = Colors.grey.withValues(alpha: 0.08)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+    canvas.drawCircle(center, radius, bgPaint);
+
     double startAngle = -math.pi / 2;
+    final totalSweep = 2 * math.pi * animationValue;
+
     for (final segment in segments) {
       if (segment.value == 0) continue;
 
-      final sweepAngle = segment.percentage * 2 * math.pi;
+      final sweepAngle = segment.percentage * totalSweep;
 
       final paint = Paint()
         ..color = segment.color
@@ -45,7 +56,8 @@ class _DonutChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _DonutChartPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _DonutChartPainter oldDelegate) =>
+      oldDelegate.animationValue != animationValue;
 }
 
 class _ChartSegment {
@@ -62,8 +74,8 @@ class _ChartSegment {
   });
 }
 
-/// Status progress indicator with clean donut chart - Fully Responsive
-class StatusProgressIndicator extends StatelessWidget {
+/// Status progress indicator with animated donut chart - Fully Responsive
+class StatusProgressIndicator extends StatefulWidget {
   final TiketStatusStats stats;
   final bool isLoading;
 
@@ -73,27 +85,57 @@ class StatusProgressIndicator extends StatelessWidget {
     this.isLoading = false,
   });
 
+  @override
+  State<StatusProgressIndicator> createState() =>
+      _StatusProgressIndicatorState();
+}
+
+class _StatusProgressIndicatorState extends State<StatusProgressIndicator>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+    _animation = CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeInOut,
+    );
+    _animController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
   List<_ChartSegment> get _segments {
-    final total = stats.total;
+    final total = widget.stats.total;
     if (total == 0) return [];
     return [
       _ChartSegment(
         label: 'Terbuka',
-        value: stats.terbuka,
+        value: widget.stats.terbuka,
         color: ShadcnTheme.statusOpen,
-        percentage: stats.terbuka / total,
+        percentage: widget.stats.terbuka / total,
       ),
       _ChartSegment(
         label: 'Diproses',
-        value: stats.diproses,
+        value: widget.stats.diproses,
         color: ShadcnTheme.statusInProgress,
-        percentage: stats.diproses / total,
+        percentage: widget.stats.diproses / total,
       ),
       _ChartSegment(
         label: 'Selesai',
-        value: stats.selesai,
+        value: widget.stats.selesai,
         color: ShadcnTheme.statusDone,
-        percentage: stats.selesai / total,
+        percentage: widget.stats.selesai / total,
       ),
     ];
   }
@@ -105,9 +147,15 @@ class StatusProgressIndicator extends StatelessWidget {
     final isTablet = size.width >= 600;
     final horizontalPadding = isTablet ? 24.0 : 16.0;
     final segments = _segments;
-    final hasData = stats.total > 0;
+    final hasData = widget.stats.total > 0;
 
-    if (isLoading) return _buildSkeleton(context, isDark, isTablet, horizontalPadding);
+    if (widget.isLoading) {
+      return StatusProgressSkeleton(
+        isDark: isDark,
+        isTablet: isTablet,
+        horizontalPadding: horizontalPadding,
+      );
+    }
     if (!hasData) return EmptyState.tickets();
 
     return Container(
@@ -160,13 +208,20 @@ class StatusProgressIndicator extends StatelessWidget {
                     color: ShadcnTheme.accent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text(
-                    '${stats.total} Total',
-                    style: TextStyle(
-                      fontSize: isTablet ? 14 : 12,
-                      fontWeight: FontWeight.w600,
-                      color: ShadcnTheme.accent,
-                    ),
+                  child: TweenAnimationBuilder<int>(
+                    tween: IntTween(begin: 0, end: widget.stats.total),
+                    duration: const Duration(milliseconds: 800),
+                    curve: Curves.easeOut,
+                    builder: (context, value, child) {
+                      return Text(
+                        '$value Total',
+                        style: TextStyle(
+                          fontSize: isTablet ? 14 : 12,
+                          fontWeight: FontWeight.w600,
+                          color: ShadcnTheme.accent,
+                        ),
+                      );
+                    },
                   ),
                 ),
               ],
@@ -181,7 +236,7 @@ class StatusProgressIndicator extends StatelessWidget {
                     children: [
                       _buildChart(context, segments, isTablet, true),
                       const SizedBox(height: 16),
-                      _buildLegend(context, segments, isDark, isTablet, true),
+                      _buildLegend(context, segments, isDark, isTablet),
                     ],
                   );
                 }
@@ -192,7 +247,7 @@ class StatusProgressIndicator extends StatelessWidget {
                     _buildChart(context, segments, isTablet, false),
                     SizedBox(width: isTablet ? 32 : 20),
                     Expanded(
-                      child: _buildLegend(context, segments, isDark, isTablet, false),
+                      child: _buildLegend(context, segments, isDark, isTablet),
                     ),
                   ],
                 );
@@ -204,54 +259,69 @@ class StatusProgressIndicator extends StatelessWidget {
     );
   }
 
-  Widget _buildChart(BuildContext context, List<_ChartSegment> segments, bool isTablet, bool isVertical) {
+  Widget _buildChart(BuildContext context, List<_ChartSegment> segments,
+      bool isTablet, bool isVertical) {
     final chartSize = isTablet ? 160.0 : (isVertical ? 140.0 : 120.0);
     final strokeWidth = isTablet ? 24.0 : 20.0;
 
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        CustomPaint(
-          size: Size(chartSize, chartSize),
-          painter: _DonutChartPainter(
-            segments: segments,
-            strokeWidth: strokeWidth,
-          ),
-        ),
-        // Center text
-        Column(
-          mainAxisSize: MainAxisSize.min,
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Stack(
+          alignment: Alignment.center,
           children: [
-            Text(
-              '${stats.total}',
-              style: TextStyle(
-                fontSize: isTablet ? 28 : (isVertical ? 24 : 22),
-                fontWeight: FontWeight.w800,
-                color: ShadTheme.of(context).colorScheme.foreground,
-                letterSpacing: -0.5,
+            CustomPaint(
+              size: Size(chartSize, chartSize),
+              painter: _DonutChartPainter(
+                segments: segments,
+                strokeWidth: strokeWidth,
+                animationValue: _animation.value,
               ),
             ),
-            Text(
-              'Total',
-              style: TextStyle(
-                fontSize: isTablet ? 14 : 12,
-                fontWeight: FontWeight.w500,
-                color: ShadTheme.of(context).colorScheme.mutedForeground,
-              ),
+            // Center text with animated count
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TweenAnimationBuilder<int>(
+                  tween: IntTween(begin: 0, end: widget.stats.total),
+                  duration: const Duration(milliseconds: 1000),
+                  curve: Curves.easeOut,
+                  builder: (context, value, child) {
+                    return Text(
+                      '$value',
+                      style: TextStyle(
+                        fontSize: isTablet ? 28 : (isVertical ? 24 : 22),
+                        fontWeight: FontWeight.w800,
+                        color: ShadTheme.of(context).colorScheme.foreground,
+                        letterSpacing: -0.5,
+                      ),
+                    );
+                  },
+                ),
+                Text(
+                  'Total',
+                  style: TextStyle(
+                    fontSize: isTablet ? 14 : 12,
+                    fontWeight: FontWeight.w500,
+                    color: ShadTheme.of(context).colorScheme.mutedForeground,
+                  ),
+                ),
+              ],
             ),
           ],
-        ),
-      ],
+        );
+      },
     );
   }
 
-  Widget _buildLegend(BuildContext context, List<_ChartSegment> segments, bool isDark, bool isTablet, bool isVertical) {
+  Widget _buildLegend(BuildContext context, List<_ChartSegment> segments,
+      bool isDark, bool isTablet) {
     return Column(
       children: segments.map((segment) {
         if (segment.value == 0) return const SizedBox.shrink();
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
-          padding: EdgeInsets.all(isTablet ? 16 : 12),
+          padding: EdgeInsets.all(isTablet ? 14 : 10),
           decoration: BoxDecoration(
             color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
             borderRadius: BorderRadius.circular(10),
@@ -263,48 +333,46 @@ class StatusProgressIndicator extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                width: isTablet ? 14 : 10,
-                height: isTablet ? 14 : 10,
+                width: isTablet ? 12 : 10,
+                height: isTablet ? 12 : 10,
                 decoration: BoxDecoration(
                   color: segment.color,
                   shape: BoxShape.circle,
                 ),
               ),
-              SizedBox(width: isTablet ? 14 : 10),
+              SizedBox(width: isTablet ? 12 : 8),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      segment.label,
-                      style: TextStyle(
-                        fontSize: isTablet ? 14 : 12,
-                        fontWeight: FontWeight.w500,
-                        color: ShadTheme.of(context).colorScheme.foreground,
-                      ),
+                child: Text(
+                  segment.label,
+                  style: TextStyle(
+                    fontSize: isTablet ? 13 : 12,
+                    fontWeight: FontWeight.w500,
+                    color: ShadTheme.of(context).colorScheme.foreground,
+                  ),
+                ),
+              ),
+              TweenAnimationBuilder<int>(
+                tween: IntTween(begin: 0, end: segment.value),
+                duration: const Duration(milliseconds: 800),
+                curve: Curves.easeOut,
+                builder: (context, value, child) {
+                  return Text(
+                    '$value',
+                    style: TextStyle(
+                      fontSize: isTablet ? 15 : 13,
+                      fontWeight: FontWeight.w700,
+                      color: segment.color,
                     ),
-                    Row(
-                      children: [
-                        Text(
-                          '${segment.value}',
-                          style: TextStyle(
-                            fontSize: isTablet ? 15 : 13,
-                            fontWeight: FontWeight.w700,
-                            color: segment.color,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '(${(segment.percentage * 100).toInt()}%)',
-                          style: TextStyle(
-                            fontSize: isTablet ? 13 : 11,
-                            fontWeight: FontWeight.w400,
-                            color: ShadTheme.of(context).colorScheme.mutedForeground,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                  );
+                },
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '(${(segment.percentage * 100).toInt()}%)',
+                style: TextStyle(
+                  fontSize: isTablet ? 12 : 10,
+                  fontWeight: FontWeight.w400,
+                  color: ShadTheme.of(context).colorScheme.mutedForeground,
                 ),
               ),
             ],
@@ -313,8 +381,23 @@ class StatusProgressIndicator extends StatelessWidget {
       }).toList(),
     );
   }
+}
 
-  Widget _buildSkeleton(BuildContext context, bool isDark, bool isTablet, double horizontalPadding) {
+/// Shimmer-animated skeleton for progress indicator
+class StatusProgressSkeleton extends StatelessWidget {
+  final bool isDark;
+  final bool isTablet;
+  final double horizontalPadding;
+
+  const StatusProgressSkeleton({
+    super.key,
+    required this.isDark,
+    required this.isTablet,
+    required this.horizontalPadding,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: ShadCard(
@@ -366,48 +449,19 @@ class StatusProgressIndicator extends StatelessWidget {
                 SizedBox(width: isTablet ? 32 : 20),
                 Expanded(
                   child: Column(
-                    children: List.generate(3, (index) => Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: EdgeInsets.all(isTablet ? 16 : 12),
-                      decoration: BoxDecoration(
-                        color: isDark ? ShadcnTheme.darkBorder : ShadcnTheme.border,
-                        borderRadius: BorderRadius.circular(10),
+                    children: List.generate(
+                      3,
+                      (index) => Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        height: isTablet ? 42 : 36,
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? ShadcnTheme.darkBorder
+                              : ShadcnTheme.border,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: isTablet ? 14 : 10,
-                            height: isTablet ? 14 : 10,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          SizedBox(width: isTablet ? 14 : 10),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: isTablet ? 70 : 50,
-                                height: isTablet ? 16 : 12,
-                                decoration: BoxDecoration(
-                                  color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
-                                  borderRadius: BorderRadius.circular(3),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Container(
-                                width: isTablet ? 50 : 40,
-                                height: isTablet ? 18 : 14,
-                                decoration: BoxDecoration(
-                                  color: isDark ? ShadcnTheme.darkMuted : ShadcnTheme.muted,
-                                  borderRadius: BorderRadius.circular(3),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    )),
+                    ),
                   ),
                 ),
               ],

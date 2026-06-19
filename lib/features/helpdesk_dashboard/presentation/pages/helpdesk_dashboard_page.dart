@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
@@ -13,9 +12,10 @@ import '../../../tiket/domain/entities/tiket.dart';
 import '../cubit/helpdesk_dashboard_cubit.dart';
 import '../cubit/helpdesk_dashboard_state.dart';
 import '../widgets/helpdesk_greeting_section.dart';
-import '../widgets/helpdesk_stats_card.dart';
-import '../../../dashboard/presentation/widgets/tiket_terbuka_section.dart';
-import '../../../dashboard/presentation/widgets/tiket_saya_section.dart';
+import '../widgets/helpdesk_status_overview.dart';
+import '../widgets/helpdesk_progress_chart.dart';
+import '../widgets/helpdesk_quick_actions.dart';
+import '../widgets/helpdesk_tiket_monitoring.dart';
 
 class HelpdeskDashboardPage extends StatefulWidget {
   const HelpdeskDashboardPage({super.key});
@@ -44,11 +44,6 @@ class _HelpdeskDashboardPageState extends State<HelpdeskDashboardPage> {
     await _helpdeskCubit.refresh();
   }
 
-  void _onAmbilTiket(String tiketId) {
-    HapticFeedback.mediumImpact();
-    _helpdeskCubit.ambilTiket(tiketId);
-  }
-
   void _onTapTiket(Tiket tiket) {
     context.push('/tiket/${tiket.id}');
   }
@@ -73,6 +68,10 @@ class _HelpdeskDashboardPageState extends State<HelpdeskDashboardPage> {
                 return current.stats.tiketTerbuka !=
                         previous.stats.tiketTerbuka ||
                     current.stats.tiketSaya != previous.stats.tiketSaya ||
+                    current.stats.tiketSelesai != previous.stats.tiketSelesai ||
+                    current.tiketTerbuka != previous.tiketTerbuka ||
+                    current.tiketSaya != previous.tiketSaya ||
+                    current.tiketSelesai != previous.tiketSelesai ||
                     current.isRefreshing != previous.isRefreshing;
               }
               return true;
@@ -115,6 +114,7 @@ class _HelpdeskDashboardPageState extends State<HelpdeskDashboardPage> {
     return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
+        // Greeting skeleton
         SliverPadding(
           padding: EdgeInsets.fromLTRB(horizontalPadding, 16, horizontalPadding, 8),
           sliver: SliverToBoxAdapter(
@@ -124,10 +124,43 @@ class _HelpdeskDashboardPageState extends State<HelpdeskDashboardPage> {
             ),
           ),
         ),
+        // Status overview skeleton
         SliverPadding(
-          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 4),
           sliver: SliverToBoxAdapter(
-            child: HelpdeskStatsCardSkeleton(
+            child: HelpdeskStatusOverviewSkeleton(
+              isDark: isDark,
+              isTablet: isTablet,
+            ),
+          ),
+        ),
+        // Chart skeleton
+        SliverPadding(
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 4),
+          sliver: SliverToBoxAdapter(
+            child: HelpdeskProgressChart(
+              perluDitangani: 0,
+              diproses: 0,
+              selesai: 0,
+              isLoading: true,
+            ),
+          ),
+        ),
+        // Quick actions skeleton
+        SliverPadding(
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 4),
+          sliver: SliverToBoxAdapter(
+            child: HelpdeskQuickActionsSkeleton(
+              isDark: isDark,
+              isTablet: isTablet,
+            ),
+          ),
+        ),
+        // Monitoring skeleton
+        SliverPadding(
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 4),
+          sliver: SliverToBoxAdapter(
+            child: HelpdeskTiketMonitoringSkeleton(
               isDark: isDark,
               isTablet: isTablet,
             ),
@@ -159,6 +192,7 @@ class _HelpdeskDashboardPageState extends State<HelpdeskDashboardPage> {
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
+          // 1. Greeting Section
           SliverPadding(
             padding: EdgeInsets.fromLTRB(horizontalPadding, 16, horizontalPadding, 8),
             sliver: SliverToBoxAdapter(
@@ -170,44 +204,61 @@ class _HelpdeskDashboardPageState extends State<HelpdeskDashboardPage> {
             ),
           ),
 
+          // 2. Status Overview (3-column stat cards + summary bar)
           SliverPadding(
-            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+            padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 4),
             sliver: SliverToBoxAdapter(
-              child: HelpdeskStatsCard(
+              child: HelpdeskStatusOverview(
+                perluDitangani: state.stats.tiketSaya,
+                diproses: state.stats.tiketSelesai,
+                selesai: state.stats.totalTiketDitangani,
                 totalDitangani: state.stats.totalTiketDitangani,
-                tiketTerbuka: state.stats.tiketTerbuka,
-                tiketSaya: state.stats.tiketSaya,
                 rataRataWaktu: state.stats.rataRataWaktuSelesai,
                 isLoading: state.isRefreshing,
               ),
             ),
           ),
 
+          // 3. Progress Chart (donut chart with legend)
           SliverPadding(
-            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+            padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 4),
+            sliver: SliverToBoxAdapter(
+              child: HelpdeskProgressChart(
+                perluDitangani: state.stats.tiketSaya,
+                diproses: state.stats.tiketSelesai,
+                selesai: state.stats.totalTiketDitangani,
+                isLoading: state.isRefreshing,
+              ),
+            ),
+          ),
+
+          // 4. Quick Actions
+          SliverPadding(
+            padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 4),
+            sliver: SliverToBoxAdapter(
+              child: HelpdeskQuickActions(
+                onLihatSemuaTiket: () => context.push('/tiket'),
+              ),
+            ),
+          ),
+
+          // 5. Ticket Monitoring (unified tabbed view)
+          SliverPadding(
+            padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 4),
             sliver: SliverToBoxAdapter(
               child: ShadToaster(
-                child: TiketTerbukaSection(
-                  tiketList: state.tiketTerbuka,
-                  isLoading: state.isLoadingTiketTerbuka,
-                  onAmbilTiket: _onAmbilTiket,
+                child: HelpdeskTiketMonitoring(
+                  tiketSaya: state.tiketSaya,
+                  tiketSelesai: state.tiketSelesai,
+                  onTapTiket: _onTapTiket,
+                  isLoading: state.isLoadingTiketSaya,
                 ),
               ),
             ),
           ),
 
-          SliverPadding(
-            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-            sliver: SliverToBoxAdapter(
-              child: TiketSayaSection(
-                tiketList: state.tiketSaya,
-                isLoading: state.isLoadingTiketSaya,
-                onTapTiket: _onTapTiket,
-              ),
-            ),
-          ),
-
-          SliverPadding(padding: EdgeInsets.only(bottom: horizontalPadding)),
+          // Bottom padding
+          SliverPadding(padding: EdgeInsets.only(bottom: horizontalPadding + 8)),
         ],
       ),
     );

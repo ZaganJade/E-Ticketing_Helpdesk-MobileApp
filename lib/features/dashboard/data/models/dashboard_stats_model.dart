@@ -1,5 +1,4 @@
 import '../../../tiket/data/models/tiket_model.dart';
-import '../../../tiket/domain/entities/tiket.dart';
 import '../../domain/entities/dashboard_stats.dart';
 import '../../domain/entities/tiket_status_stats.dart';
 

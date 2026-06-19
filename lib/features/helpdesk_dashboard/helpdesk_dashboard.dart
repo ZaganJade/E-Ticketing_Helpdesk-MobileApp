@@ -15,3 +15,7 @@ export 'presentation/pages/helpdesk_dashboard_page.dart';
 // Widgets
 export 'presentation/widgets/helpdesk_greeting_section.dart';
 export 'presentation/widgets/helpdesk_stats_card.dart';
+export 'presentation/widgets/helpdesk_status_overview.dart';
+export 'presentation/widgets/helpdesk_progress_chart.dart';
+export 'presentation/widgets/helpdesk_quick_actions.dart';
+export 'presentation/widgets/helpdesk_tiket_monitoring.dart';

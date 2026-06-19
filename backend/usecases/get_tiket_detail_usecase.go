@@ -52,11 +52,28 @@ func (uc *GetTiketDetailUseCase) Execute(ctx context.Context, input GetTiketDeta
 	log.Printf("[TICKET DETAIL] Ticket found, created by: %s", tiket.DibuatOleh)
 
 	// Check access permission
+	// Normalize role to handle both "helpdesk" and "Peran.helpdesk" formats
+	roleMap := map[string]entities.Role{
+		"pengguna":       entities.RolePengguna,
+		"helpdesk":       entities.RoleHelpdesk,
+		"admin":          entities.RoleAdmin,
+		"Peran.pengguna":  entities.RolePengguna,
+		"Peran.helpdesk":  entities.RoleHelpdesk,
+		"Peran.admin":     entities.RoleAdmin,
+		"entities.pengguna": entities.RolePengguna,
+		"entities.helpdesk": entities.RoleHelpdesk,
+		"entities.admin":    entities.RoleAdmin,
+	}
+	normalizedRole := input.UserRole
+	if r, ok := roleMap[string(input.UserRole)]; ok {
+		normalizedRole = r
+	}
+
 	// Regular users can only see their own tickets
 	// Helpdesk and Admin can see all tickets
-	isPengguna := input.UserRole == entities.RolePengguna
-	isHelpdesk := input.UserRole == entities.RoleHelpdesk
-	isAdmin := input.UserRole == entities.RoleAdmin
+	isPengguna := normalizedRole == entities.RolePengguna
+	isHelpdesk := normalizedRole == entities.RoleHelpdesk
+	isAdmin := normalizedRole == entities.RoleAdmin
 
 	log.Printf("[TICKET DETAIL] Role checks - isPengguna: %t, isHelpdesk: %t, isAdmin: %t",
 		isPengguna, isHelpdesk, isAdmin)
