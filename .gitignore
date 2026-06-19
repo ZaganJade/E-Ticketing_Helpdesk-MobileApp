@@ -67,6 +67,8 @@ backend/wire_gen.go
 
 # IDE
 .vscode/
+.cursor/
+.githooks/
 *.code-workspace
 
 # OS
